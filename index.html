@@ -1,37 +1,1110 @@
-﻿    // ========== ДОХОДЫ (последняя функция перед initApp) ==========
-    // ... может быть код доходов ...
+﻿<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+    <title>Календарь PWA</title>
+
+    <!-- PWA -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="icon-192.png">
+
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #000; display: flex; justify-content: center; align-items: flex-start; min-height: 100vh; }
+        #app { width:100%; max-width:480px; background:#1c1c1e; min-height:100vh; display:flex; flex-direction:column; box-shadow:0 0 20px rgba(0,0,0,0.5); position:relative; color:#fff; }
+
+        .sticky-header { position: sticky; top: 0; z-index: 10; background: #1c1c1e; }
+        .calendar-container { padding:12px 12px 8px; background:#1c1c1e; border-bottom:1px solid #38383a; }
+        .month-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; font-size:1.2rem; font-weight:600; }
+        .month-header button { background:none; border:none; font-size:1.4rem; padding:6px 12px; cursor:pointer; color:#0a84ff; border-radius:8px; }
+        .toolbar { display:flex; align-items:center; gap:8px; margin-bottom:10px; font-size:0.9rem; }
+        .graph-btn, .collapse-btn { background:#2c2c2e; color:#0a84ff; border:1px solid #0a84ff; border-radius:8px; padding:6px 12px; cursor:pointer; font-weight:500; }
+        .graph-btn.active, .collapse-btn.active { background:#0a84ff; color:#fff; }
+        .weekdays { display:grid; grid-template-columns:repeat(7,1fr); text-align:center; font-size:0.8rem; color:#8e8e93; margin-bottom:4px; }
+        .calendar-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:4px; }
+
+        .day-cell {
+            aspect-ratio: 1 / 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            background: rgba(255,255,255,0.08);
+            border-radius: 8px;
+            cursor: pointer;
+            border: 2px solid transparent;
+            font-size: 0.95rem;
+            color: #fff;
+            overflow: hidden;
+        }
+        .day-cell.other-month { color:#555; pointer-events:none; background:rgba(255,255,255,0.03); }
+        .day-cell.weekend { color:#ff453a; } .day-cell.weekend.other-month { color:#882222; }
+        .day-cell.today { border-color:#0a84ff; background:rgba(10,132,255,0.15); }
+        .day-cell.selected { background:#0a84ff; color:#fff!important; border-color:#0a84ff; }
+
+        .reminder-indicator, .event-indicator, .income-indicator {
+            position: absolute;
+            top: 2px;
+            font-size: 0.6rem;
+            font-weight: 700;
+            min-width: 15px;
+            height: 15px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 3px;
+            z-index: 2;
+        }
+        .reminder-indicator { right: 2px; background:#30d158; color:#000; }
+        .event-indicator { left: 2px; background:#FF9F0A; color:#000; }
+        .income-indicator { left: 50%; transform: translateX(-50%); background:#FFD60A; color:#000; }
+
+        .day-content {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 2px;
+            width: 100%;
+            height: 100%;
+        }
+        .day-number { line-height: 1; }
+        .day-label { font-size: 0.65rem; font-weight: 600; }
+
+        .day-categories {
+            position: absolute;
+            bottom: 2px;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: center;
+            gap: 1px;
+            font-size: 0.6rem;
+            font-weight: 600;
+            z-index: 1;
+        }
+        .day-time {
+            position: absolute;
+            bottom: 2px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            font-size: 0.6rem;
+            color: #ccc;
+            z-index: 1;
+        }
+
+        .selected-date-time { padding:14px 20px; background:#1c1c1e; border-bottom:1px solid #38383a; display:flex; justify-content:space-between; align-items:center; }
+        .add-btn-inline { background:#0a84ff; color:#fff; border:none; font-size:1.5rem; width:36px; height:36px; border-radius:50%; cursor:pointer; display:flex; align-items:center; justify-content:center; margin-left:auto; }
+
+        .view-tabs { display:flex; background:#1c1c1e; border-bottom:1px solid #38383a; }
+        .view-tab { flex:1; text-align:center; padding:10px; font-size:0.85rem; color:#8e8e93; cursor:pointer; border-bottom:2px solid transparent; }
+        .view-tab.active { color:#0a84ff; border-bottom-color:#0a84ff; }
+
+        .tab-content { display:none; flex:1; overflow-y:auto; padding:12px 20px; }
+        .tab-content.active { display:block; }
+
+        .income-item { background:rgba(10, 132, 255, 0.15); border-radius:8px; padding:10px 12px; margin-bottom:6px; display:flex; align-items:center; justify-content:space-between; }
+        .schedule-item { background:#2c2c2e; border-radius:8px; padding:10px 12px; margin-bottom:6px; display:flex; align-items:center; justify-content:space-between; }
+        .event-item { background:rgba(255, 159, 10, 0.2); border-radius:8px; padding:10px 12px; margin-bottom:6px; cursor:pointer; }
+        .reminder-item { background:#1b3d1b; border-radius:8px; padding:10px 12px; margin-bottom:6px; display:flex; align-items:center; justify-content:space-between; }
+        .reminder-left { display:flex; align-items:center; gap:8px; flex:1; }
+        .reminder-checkbox { width:20px; height:20px; accent-color:#0a84ff; flex-shrink:0; }
+        .note-icon { font-size:1rem; cursor:pointer; }
+        .delete-btn { background:none; border:none; color:#ff453a; font-size:1.2rem; cursor:pointer; }
+
+        .categories-panel { flex:1; padding:12px 20px; overflow-y:auto; }
+        .category-item { display:flex; align-items:center; padding:10px 12px; margin-bottom:6px; background:#2c2c2e; border-radius:8px; border:2px solid transparent; cursor:pointer; }
+        .category-item.active { border-color:#0a84ff; background:#1c1c2e; }
+        .category-name { flex:1; } .category-time { color:#8e8e93; font-size:0.8rem; margin-right:8px; }
+        .category-color { width:16px; height:16px; border-radius:4px; margin-right:8px; }
+        .add-category-btn { background:#0a84ff; color:#fff; border:none; padding:8px 16px; border-radius:8px; width:100%; margin-top:8px; }
+
+        .page { display:none; flex:1; overflow-y:auto; padding-bottom:60px; }
+        .page.active { display:block; }
+
+        .bottom-nav { position:fixed; bottom:0; left:0; right:0; background:#1c1c1e; border-top:1px solid #38383a; display:flex; justify-content:space-around; padding:8px 0 12px; z-index:50; }
+        .nav-item { background:none; border:none; color:#8e8e93; font-size:0.7rem; display:flex; flex-direction:column; align-items:center; gap:2px; cursor:pointer; min-width:60px; }
+        .nav-item.active { color:#0a84ff; }
+        .nav-item svg { width:24px; height:24px; fill:currentColor; }
+
+        .notes-container { padding:16px; }
+        .notes-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
+        .notes-header h2 { margin:0; }
+        .filters { display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap; }
+        .filter-select { background:#2c2c2e; color:#fff; border:1px solid #38383a; border-radius:8px; padding:8px; flex:1; min-width:120px; }
+        .note-card { background:#2c2c2e; border-radius:12px; padding:12px; margin-bottom:8px; cursor:pointer; }
+        .note-card.linked { border-left:4px solid #0a84ff; }
+        .note-card-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
+        .note-card-title { font-weight:600; }
+        .note-card-meta { font-size:0.8rem; color:#8e8e93; }
+        .note-card-preview { font-size:0.85rem; color:#ccc; }
+
+        .note-editor { padding:16px; }
+        .todo-list { list-style:none; padding:0; margin:12px 0; }
+        .todo-item { display:flex; align-items:center; gap:8px; padding:6px 0; }
+        .todo-checkbox { width:20px; height:20px; accent-color:#0a84ff; }
+        .todo-text { flex:1; background:transparent; border:none; color:#fff; font-size:0.9rem; }
+        .todo-text.completed { text-decoration:line-through; color:#8e8e93; }
+
+        .modal { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); display:flex; align-items:center; justify-content:center; z-index:100; }
+        .modal-content { background:#2c2c2e; border-radius:20px; padding:20px; width:85%; max-width:360px; color:#fff; position:relative; }
+        .close { position:absolute; top:12px; right:16px; font-size:24px; color:#8e8e93; cursor:pointer; }
+        .btn { background:#0a84ff; color:#fff; border:none; padding:10px 16px; border-radius:8px; cursor:pointer; margin-top:8px; } .btn.danger { background:#ff453a; }
+        .color-options { display:flex; gap:8px; margin:8px 0; flex-wrap:wrap; }
+        .color-option { width:32px; height:32px; border-radius:8px; cursor:pointer; border:2px solid transparent; } .color-option.selected { border-color:#0a84ff; }
+
+        .balance-input { width:100%; padding:8px; background:#1c1c1e; border:1px solid #38383a; border-radius:8px; color:#fff; margin-bottom:8px; }
+    </style>
+</head>
+<body>
+<div id="app">
+    <!-- Главная (календарь) -->
+    <div id="standardPanel" class="page active">
+        <div class="sticky-header">
+            <div class="calendar-container">
+                <div class="month-header">
+                    <button id="prevMonth">‹</button>
+                    <span id="monthYear"></span>
+                    <button id="nextMonth">›</button>
+                </div>
+                <div class="toolbar">
+                    <button id="graphToggle" class="graph-btn">График</button>
+                    <button id="collapseBtn" class="collapse-btn">±</button>
+                </div>
+                <div class="weekdays"><div>Пн</div><div>Вт</div><div>Ср</div><div>Чт</div><div>Пт</div><div>Сб</div><div>Вс</div></div>
+                <div id="calendarGrid" class="calendar-grid"></div>
+            </div>
+            <div class="selected-date-time">
+                <span id="selectedDateLabel"></span>
+                <span id="currentTime"></span>
+                <button class="add-btn-inline" id="addButton">+</button>
+            </div>
+            <div class="view-tabs">
+                <div class="view-tab active" data-tab="scheduleIncome">Расписание и доходы</div>
+                <div class="view-tab" data-tab="eventsReminders">События и напоминания</div>
+            </div>
+        </div>
+        <div id="scheduleIncomeList" class="tab-content active"></div>
+        <div id="eventsRemindersList" class="tab-content"></div>
+        <div id="graphPanel" class="categories-panel" style="display:none;"></div>
+    </div>
+
+    <!-- Заметки -->
+    <div id="notesPanel" class="page">
+        <div class="notes-container">
+            <div class="notes-header">
+                <h2>Заметки</h2>
+                <button class="add-btn-inline" id="addNoteBtn">+</button>
+            </div>
+            <div class="filters">
+                <select id="dateFilter" class="filter-select">
+                    <option value="all">Все даты</option>
+                    <option value="newest">Сначала новые</option>
+                    <option value="oldest">Сначала старые</option>
+                </select>
+                <select id="linkFilter" class="filter-select">
+                    <option value="all">Все заметки</option>
+                    <option value="linked">Связанные</option>
+                    <option value="unlinked">Несвязанные</option>
+                </select>
+            </div>
+            <div id="notesList"></div>
+        </div>
+        <div id="noteEditor" class="note-editor" style="display:none;"></div>
+    </div>
+
+    <!-- Доходы -->
+    <div id="incomePanel" class="page">
+        <div style="padding:16px;">
+            <h2>Доходы и расходы</h2>
+            <div style="margin-bottom:20px;">
+                <h3>Категории доходов</h3>
+                <div id="incomeCategoriesList"></div>
+                <button class="btn" id="addIncomeCategoryBtn">+ Категория дохода</button>
+            </div>
+            <div style="margin-bottom:20px;">
+                <h3>Баланс месяца</h3>
+                <select id="balanceMonth" class="balance-input"></select>
+                <input type="number" id="balanceStart" class="balance-input" placeholder="Остаток на начало периода">
+                <input type="number" id="balanceEnd" class="balance-input" placeholder="Остаток сегодня">
+                <button class="btn" id="saveBalance">Запомнить за месяц</button>
+                <p>Доход за месяц: <strong id="totalIncome">0 ₽</strong></p>
+                <p>Расходы за месяц: <strong id="expensesResult">0 ₽</strong></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Статистика -->
+    <div id="statsPanel" class="page"><div style="padding:20px;">Статистика — скоро</div></div>
+
+    <!-- Настройки (с кнопкой установки) -->
+    <div id="settingsPanel" class="page">
+        <div style="padding:20px;">
+            <h3>Настройки</h3>
+            <button id="installBtn" style="display:none; margin-top:20px; padding:12px; background:#0a84ff; color:#fff; border:none; border-radius:8px; width:100%; font-size:1rem;">Установить приложение</button>
+            <p id="installInstructions" style="margin-top:12px; color:#8e8e93;"></p>
+        </div>
+    </div>
+
+    <!-- Нижняя навигация -->
+    <div class="bottom-nav">
+        <button class="nav-item active" data-page="standardPanel">
+            <svg viewBox="0 0 24 24"><path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zm0-12H5V6h14v2z"/></svg>
+            Календарь
+        </button>
+        <button class="nav-item" data-page="notesPanel">
+            <svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm4 18H6V4h7v5h5v11z"/></svg>
+            Заметки
+        </button>
+        <button class="nav-item" data-page="incomePanel">
+            <svg viewBox="0 0 24 24"><path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.42 0 2.13.54 2.39 1.4.12.4.47.66.88.65.55-.01.95-.53.82-1.06C15.15 6.19 13.36 5 11.5 5H11V3H9v2H8.5C6.5 5 5 6.5 5 8.5c0 2.36 1.91 3.69 4.7 4.42 2.5.64 3.3 1.36 3.3 2.33 0 1.23-1.1 2.05-2.9 2.05-1.7 0-2.55-.67-2.86-1.68-.12-.41-.48-.67-.89-.63-.54.02-.93.52-.78 1.03C6.13 18.76 8.08 20 10.5 20h.5v2h2v-2h.5c2.39 0 4.5-1.59 4.5-4 0-2.37-2-3.74-5.2-5.1z"/></svg>
+            Доходы
+        </button>
+        <button class="nav-item" data-page="statsPanel">
+            <svg viewBox="0 0 24 24"><path d="M5 9.2h3V19H5zM10.6 5h2.8v14h-2.8zm5.6 8H19v6h-2.8z"/></svg>
+            Статистика
+        </button>
+        <button class="nav-item" data-page="settingsPanel">
+            <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.33-.02-.64-.06-.94l2.02-1.58c.18-.14.23-.38.12-.56l-1.89-3.28c-.12-.19-.36-.26-.56-.18l-2.38.96c-.5-.38-1.06-.68-1.66-.88L14.45 3.5c-.04-.2-.2-.34-.4-.34h-3.78c-.2 0-.36.14-.4.34l-.3 2.52c-.6.2-1.16.5-1.66.88l-2.38-.96c-.2-.08-.44-.01-.56.18L3.29 9.38c-.12.19-.07.42.12.56l2.02 1.58c-.04.3-.06.61-.06.94 0 .33.02.64.06.94l-2.02 1.58c-.18.14-.23.38-.12.56l1.89 3.28c.12.19.36.26.56.18l2.38-.96c.5.38 1.06.68 1.66.88l.3 2.52c.04.2.2.34.4.34h3.78c.2 0 .36-.14.4-.34l.3-2.52c.6-.2 1.16-.5 1.66-.88l2.38.96c.2.08.44.01.56-.18l1.89-3.28c.12-.19.07-.42-.12-.56l-2.02-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
+            Настройки
+        </button>
+    </div>
+</div>
+<div id="modal" class="modal" style="display:none;"><div class="modal-content" id="modalInner"></div></div>
+
+<script>
+(function() {
+    // ========== IndexedDB ==========
+    const DB_NAME = 'CalendarPWA', DB_VERSION = 1;
+    let db;
+
+    function openDB() {
+        return new Promise((resolve, reject) => {
+            const req = indexedDB.open(DB_NAME, DB_VERSION);
+            req.onupgradeneeded = (event) => {
+                const database = event.target.result;
+                if (!database.objectStoreNames.contains('appData')) {
+                    database.createObjectStore('appData', { keyPath: 'key' });
+                }
+            };
+            req.onsuccess = (event) => { db = event.target.result; resolve(db); };
+            req.onerror = (event) => reject(event.target.error);
+        });
+    }
+
+    async function loadData() {
+        if (!db) await openDB();
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction('appData', 'readonly');
+            const store = tx.objectStore('appData');
+            const request = store.get('state');
+            request.onsuccess = () => resolve(request.result ? request.result.value : null);
+            request.onerror = () => reject(request.error);
+        });
+    }
+
+    async function saveData(state) {
+        if (!db) await openDB();
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction('appData', 'readwrite');
+            const store = tx.objectStore('appData');
+            store.put({ key: 'state', value: state });
+            tx.oncomplete = () => { console.log('Данные сохранены'); resolve(); };
+            tx.onerror = (event) => reject(event.target.error);
+        });
+    }
+
+    // ========== Глобальные данные ==========
+    let eventsData = [
+        { id:1, date:'2026-05-30', type:'event', text:'Встреча с командой', timeStart:'10:00', timeEnd:'11:30', repeat:'none' },
+        { id:2, date:'2026-05-30', type:'reminder', text:'Купить молоко', time:'09:00', completed:false, linkedNoteId:null },
+        { id:3, date:formatDateKey(new Date()), type:'reminder', text:'Проверить почту', time:'', completed:false, linkedNoteId:null }
+    ];
+    let nextId = 5;
+    let categories = [
+        { id:'cat1', name:'Рабочий', time:'9:00-18:00', color:'#FFFFFF' },
+        { id:'cat2', name:'Учёба', time:'10:00-14:00', color:'#FF453A' }
+    ];
+    let nextCatId = 3;
+    let dayCategories = {};
+    let activeCategoryId = null;
+    let incomeCategories = [];
+    let incomeRecords = [];
+    let nextIncomeId = 1;
+    let monthlyBalances = {};
+    let notes = [];
+    let nextNoteId = 1;
+
+    const today = new Date(); today.setHours(0,0,0,0);
+    let currentMonth = today.getMonth(), currentYear = today.getFullYear();
+    let selectedDate = new Date(today);
+    let currentView = 'standard';
+    let isCollapsed = false;
+    let currentWeekStart = getMonday(today);
+    let currentPage = 'standardPanel';
+    let currentTab = 'scheduleIncome';
+    let currentFolderId = null;
+
+    function formatDateKey(d){ const y=d.getFullYear(); const m=String(d.getMonth()+1).padStart(2,'0'); const day=String(d.getDate()).padStart(2,'0'); return `${y}-${m}-${day}`; }
+    function formatDateLong(d){ return d.toLocaleDateString('ru-RU',{ weekday:'long', day:'numeric', month:'long', year:'numeric' }); }
+    function getMonthName(y,m){ return new Date(y,m).toLocaleDateString('ru-RU',{ month:'long', year:'numeric' }); }
+    function getMonday(d){ const day=d.getDay(), diff=(day===0?-6:1-day); const monday=new Date(d); monday.setDate(d.getDate()+diff); monday.setHours(0,0,0,0); return monday; }
+
+    // DOM
+    const els = {
+        monthYear: document.getElementById('monthYear'),
+        calendarGrid: document.getElementById('calendarGrid'),
+        scheduleIncomeList: document.getElementById('scheduleIncomeList'),
+        eventsRemindersList: document.getElementById('eventsRemindersList'),
+        graphPanel: document.getElementById('graphPanel'),
+        categoriesList: null,
+        selectedDateLabel: document.getElementById('selectedDateLabel'),
+        currentTime: document.getElementById('currentTime'),
+        modal: document.getElementById('modal'),
+        modalInner: document.getElementById('modalInner'),
+        collapseBtn: document.getElementById('collapseBtn'),
+        graphToggle: document.getElementById('graphToggle'),
+        addBtn: document.getElementById('addButton'),
+        prevMonth: document.getElementById('prevMonth'),
+        nextMonth: document.getElementById('nextMonth'),
+        addCategoryBtn: null,
+        incomeCategoriesList: document.getElementById('incomeCategoriesList'),
+        addIncomeCategoryBtn: document.getElementById('addIncomeCategoryBtn'),
+        balanceMonth: document.getElementById('balanceMonth'),
+        balanceStart: document.getElementById('balanceStart'),
+        balanceEnd: document.getElementById('balanceEnd'),
+        totalIncome: document.getElementById('totalIncome'),
+        expensesResult: document.getElementById('expensesResult'),
+        saveBalance: document.getElementById('saveBalance'),
+        addNoteBtn: document.getElementById('addNoteBtn'),
+        notesList: document.getElementById('notesList'),
+        noteEditor: document.getElementById('noteEditor'),
+        dateFilter: document.getElementById('dateFilter'),
+        linkFilter: document.getElementById('linkFilter')
+    };
+
+    async function persistState() {
+        await saveData({
+            eventsData, nextId, categories, nextCatId, dayCategories,
+            incomeCategories, incomeRecords, nextIncomeId, monthlyBalances,
+            notes, nextNoteId
+        });
+    }
+
+    // Переключение страниц
+    function switchPage(pageId) {
+        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+        document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+        const target = document.getElementById(pageId);
+        if (target) target.classList.add('active');
+        document.querySelector(`.nav-item[data-page="${pageId}"]`)?.classList.add('active');
+        currentPage = pageId;
+        if (pageId === 'notesPanel') renderFilteredNotes();
+        if (pageId === 'standardPanel') { renderCalendar(); if (currentView === 'standard') updateLists(); }
+        if (pageId === 'incomePanel') renderIncomePage();
+    }
+
+    // Режим календаря
+    function switchCalendarView(view) {
+        currentView = view;
+        const viewTabs = document.querySelector('.view-tabs');
+        if (view === 'standard') {
+            els.scheduleIncomeList.style.display = currentTab === 'scheduleIncome' ? 'block' : 'none';
+            els.eventsRemindersList.style.display = currentTab === 'eventsReminders' ? 'block' : 'none';
+            els.graphPanel.style.display = 'none';
+            if (viewTabs) viewTabs.style.display = 'flex';
+            els.graphToggle.classList.remove('active');
+            els.graphToggle.textContent = 'График';
+        } else {
+            if (viewTabs) viewTabs.style.display = 'none';
+            els.scheduleIncomeList.style.display = 'none';
+            els.eventsRemindersList.style.display = 'none';
+            els.graphPanel.style.display = 'block';
+            els.graphToggle.classList.add('active');
+            els.graphToggle.textContent = 'График';
+            renderCategories();
+        }
+        renderCalendar();
+        if (view === 'standard') updateLists();
+    }
+
+    els.graphToggle.addEventListener('click', () => switchCalendarView(currentView === 'standard' ? 'graph' : 'standard'));
+    els.collapseBtn.addEventListener('click', () => {
+        isCollapsed = !isCollapsed;
+        els.collapseBtn.classList.toggle('active', isCollapsed);
+        if (!isCollapsed) { currentMonth = selectedDate.getMonth(); currentYear = selectedDate.getFullYear(); }
+        else { currentWeekStart = getMonday(selectedDate); }
+        renderCalendar();
+        if (currentView === 'standard') updateLists();
+    });
+
+    // Табы под датой
+    document.querySelectorAll('.view-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+            document.querySelectorAll('.view-tab').forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            currentTab = tab.dataset.tab;
+            els.scheduleIncomeList.style.display = currentTab === 'scheduleIncome' ? 'block' : 'none';
+            els.eventsRemindersList.style.display = currentTab === 'eventsReminders' ? 'block' : 'none';
+        });
+    });
+
+    // Рендер календаря
+    function renderCalendar() {
+        let year, month;
+        if (isCollapsed) {
+            const start = currentWeekStart;
+            const end = new Date(start); end.setDate(start.getDate() + 6);
+            year = start.getFullYear(); month = start.getMonth();
+            els.monthYear.textContent = `Нед. ${start.getDate()} ${start.toLocaleDateString('ru-RU',{month:'long'})} – ${end.getDate()} ${end.toLocaleDateString('ru-RU',{month:'long'})}`;
+        } else {
+            year = currentYear; month = currentMonth;
+            els.monthYear.textContent = getMonthName(year, month);
+        }
+        const todayKey = formatDateKey(today), selectedKey = formatDateKey(selectedDate);
+        els.calendarGrid.innerHTML = '';
+
+        if (isCollapsed) {
+            const start = new Date(currentWeekStart);
+            for (let i = 0; i < 7; i++) {
+                const date = new Date(start); date.setDate(start.getDate() + i);
+                els.calendarGrid.appendChild(createDayCell(date, formatDateKey(date), todayKey, selectedKey, false));
+            }
+        } else {
+            const firstDay = new Date(year, month, 1);
+            const lastDay = new Date(year, month + 1, 0);
+            const daysInMonth = lastDay.getDate();
+            let startDayIndex = (firstDay.getDay() + 6) % 7;
+            const prevMonthLastDay = new Date(year, month, 0).getDate();
+
+            for (let i = 0; i < 42; i++) {
+                let dayNum, dateKey, isOtherMonth = false;
+                if (i < startDayIndex) {
+                    dayNum = prevMonthLastDay - startDayIndex + i + 1;
+                    const prevM = month === 0 ? 11 : month - 1, prevY = month === 0 ? year - 1 : year;
+                    dateKey = `${prevY}-${String(prevM + 1).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
+                    isOtherMonth = true;
+                } else if (i >= startDayIndex + daysInMonth) {
+                    dayNum = i - startDayIndex - daysInMonth + 1;
+                    const nextM = month === 11 ? 0 : month + 1, nextY = month === 11 ? year + 1 : year;
+                    dateKey = `${nextY}-${String(nextM + 1).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
+                    isOtherMonth = true;
+                } else {
+                    dayNum = i - startDayIndex + 1;
+                    dateKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
+                }
+                const date = new Date(dateKey);
+                els.calendarGrid.appendChild(createDayCell(date, dateKey, todayKey, selectedKey, isOtherMonth));
+            }
+        }
+    }
+
+    function createDayCell(date, dateKey, todayKey, selectedKey, isOtherMonth) {
+        const cell = document.createElement('div');
+        cell.className = 'day-cell';
+        const dow = (date.getDay() + 6) % 7;
+        if (isOtherMonth && !isCollapsed) cell.classList.add('other-month');
+        if (dow === 5 || dow === 6) cell.classList.add('weekend');
+        if (dateKey === todayKey) cell.classList.add('today');
+        if (dateKey === selectedKey && currentView === 'standard') cell.classList.add('selected');
+
+        const remindersCount = eventsData.filter(e => e.date === dateKey && e.type === 'reminder').length;
+        const eventsCount = eventsData.filter(e => e.date === dateKey && e.type === 'event').length;
+        const hasIncome = incomeRecords.some(r => r.date === dateKey);
+
+        if (remindersCount) {
+            const ind = document.createElement('span'); ind.className = 'reminder-indicator'; ind.textContent = remindersCount; cell.appendChild(ind);
+        }
+        if (eventsCount) {
+            const ind = document.createElement('span'); ind.className = 'event-indicator'; ind.textContent = eventsCount; cell.appendChild(ind);
+        }
+        if (hasIncome) {
+            const ind = document.createElement('span'); ind.className = 'income-indicator'; ind.textContent = '₽'; cell.appendChild(ind);
+        }
+
+        const contentDiv = document.createElement('div'); contentDiv.className = 'day-content';
+        const numberSpan = document.createElement('span'); numberSpan.className = 'day-number'; numberSpan.textContent = date.getDate();
+        const dayCats = dayCategories[dateKey] || [];
+        if (dayCats.length) {
+            const cat = categories.find(c => c.id === dayCats[0]);
+            if (cat) numberSpan.style.color = cat.color;
+            const letter = document.createElement('span'); letter.className = 'day-label';
+            letter.style.color = cat?.color || '#fff';
+            letter.textContent = cat?.name.charAt(0).toUpperCase() || '';
+            contentDiv.appendChild(numberSpan);
+            contentDiv.appendChild(letter);
+        } else {
+            contentDiv.appendChild(numberSpan);
+        }
+        cell.appendChild(contentDiv);
+
+        if (dayCats.length >= 2) {
+            const catDiv = document.createElement('div'); catDiv.className = 'day-categories';
+            dayCats.forEach(id => {
+                const c = categories.find(x => x.id === id);
+                if (c) { const s = document.createElement('span'); s.textContent = c.name.charAt(0); s.style.color = c.color; catDiv.appendChild(s); }
+            });
+            cell.appendChild(catDiv);
+        } else if (dayCats.length === 1) {
+            const cat = categories.find(c => c.id === dayCats[0]);
+            if (cat?.time) {
+                const t = document.createElement('span'); t.className = 'day-time'; t.textContent = cat.time; cell.appendChild(t);
+            }
+        }
+
+        cell.addEventListener('click', () => {
+            if (isOtherMonth && !isCollapsed) return;
+            if (currentView === 'standard') {
+                selectedDate = new Date(dateKey);
+                if (!isCollapsed) { currentMonth = selectedDate.getMonth(); currentYear = selectedDate.getFullYear(); }
+                renderCalendar();
+                updateLists();
+            } else if (activeCategoryId) {
+                let cats = dayCategories[dateKey] || [];
+                cats = cats.includes(activeCategoryId) ? cats.filter(id => id !== activeCategoryId) : [...cats, activeCategoryId];
+                if (cats.length) dayCategories[dateKey] = cats; else delete dayCategories[dateKey];
+                renderCalendar();
+                renderCategories();
+            }
+        });
+        return cell;
+    }
+
+    function updateLists() {
+        els.currentTime.textContent = new Date().toLocaleTimeString('ru-RU',{ hour:'2-digit', minute:'2-digit' });
+        els.selectedDateLabel.textContent = formatDateLong(selectedDate);
+        const key = formatDateKey(selectedDate);
+        const scheduleCatIds = dayCategories[key] || [];
+        const evs = eventsData.filter(e => e.date === key && e.type === 'event');
+        const rems = eventsData.filter(e => e.date === key && e.type === 'reminder');
+        const incomes = incomeRecords.filter(r => r.date === key);
+
+        let html1 = '';
+        if (incomes.length) {
+            incomes.forEach(inc => {
+                const cat = incomeCategories.find(c => c.id === inc.categoryId);
+                html1 += `<div class="income-item">
+                    <span>${cat?.name || 'Доход'}</span>
+                    <input type="number" class="income-amount" value="${inc.amount || ''}" data-id="${inc.id}" placeholder="Сумма">
+                    <button class="delete-btn" data-id="${inc.id}">×</button>
+                </div>`;
+            });
+        }
+        if (scheduleCatIds.length) {
+            scheduleCatIds.forEach(id => {
+                const cat = categories.find(c => c.id === id);
+                if (cat) html1 += `<div class="schedule-item"><span style="color:${cat.color}">${cat.name}</span><span>${cat.time || '—'}</span></div>`;
+            });
+        }
+        if (!incomes.length && !scheduleCatIds.length) html1 = '<p style="color:#8e8e93; padding:8px 0;">Нет доходов и расписания</p>';
+        els.scheduleIncomeList.innerHTML = html1;
+
+        let html2 = '';
+        if (evs.length) evs.forEach(ev => html2 += `<div class="event-item">${ev.text} (${ev.timeStart || '?'}-${ev.timeEnd || '?'})</div>`);
+        else html2 += '<p style="color:#8e8e93; padding:8px 0;">Нет событий</p>';
+        if (rems.length) {
+            rems.forEach(rem => {
+                const linkedNote = rem.linkedNoteId ? notes.find(n => n.id === rem.linkedNoteId) : null;
+                html2 += `<div class="reminder-item ${rem.completed ? 'completed' : ''}">
+                    <div class="reminder-left">
+                        <span>${rem.text} ${rem.time || ''}</span>
+                        ${linkedNote ? `<span class="note-icon" data-note-id="${linkedNote.id}">📄</span>` : ''}
+                    </div>
+                    <input type="checkbox" class="reminder-checkbox" ${rem.completed ? 'checked' : ''}>
+                </div>`;
+            });
+        } else html2 += '<p style="color:#8e8e93; padding:8px 0;">Нет напоминаний</p>';
+        els.eventsRemindersList.innerHTML = html2;
+
+        document.querySelectorAll('.income-amount').forEach(inp => inp.addEventListener('change', async function() {
+            const rec = incomeRecords.find(r => r.id === parseInt(this.dataset.id));
+            if (rec) { rec.amount = parseFloat(this.value) || 0; await persistState(); }
+        }));
+        document.querySelectorAll('.income-item .delete-btn').forEach(btn => btn.addEventListener('click', async function() {
+            incomeRecords = incomeRecords.filter(r => r.id !== parseInt(this.dataset.id));
+            await persistState();
+            updateLists(); renderCalendar();
+        }));
+        document.querySelectorAll('.event-item').forEach((div, idx) => div.addEventListener('click', () => openDetailModal(evs[idx])));
+        document.querySelectorAll('.reminder-item').forEach((div, idx) => {
+            const rem = rems[idx];
+            div.querySelector('.reminder-checkbox').addEventListener('change', async e => {
+                e.stopPropagation();
+                rem.completed = e.target.checked;
+                await persistState();
+                updateLists();
+            });
+            div.addEventListener('click', e => {
+                if (e.target.classList.contains('note-icon')) {
+                    const note = notes.find(n => n.id === e.target.dataset.noteId);
+                    if (note) { switchPage('notesPanel'); openNoteEditor(note.id); }
+                    return;
+                }
+                if (e.target.tagName !== 'INPUT') openDetailModal(rem);
+            });
+        });
+    }
+
+    // График
+    function renderCategories() {
+        if (!els.categoriesList) {
+            els.graphPanel.innerHTML = '<h3>Категории графика</h3><div id="categoriesList"></div><button class="add-category-btn" id="addCategoryBtn">+ Добавить категорию</button>';
+            els.categoriesList = document.getElementById('categoriesList');
+            els.addCategoryBtn = document.getElementById('addCategoryBtn');
+            els.addCategoryBtn.addEventListener('click', () => {
+                const name = prompt('Название:');
+                if (!name) return;
+                const time = prompt('Время (можно пусто):') || '';
+                const colorName = prompt('Цвет (white/red/green/yellow/blue/purple/orange/cyan):') || 'white';
+                const map = { white:'#FFFFFF', red:'#FF453A', green:'#30D158', yellow:'#FFD60A', blue:'#0A84FF', purple:'#BF5AF2', orange:'#FF9F0A', cyan:'#5AC8FA' };
+                categories.push({ id:'cat'+(nextCatId++), name, time, color: map[colorName]||'#FFFFFF' });
+                renderCategories();
+                persistState();
+            });
+        }
+        els.categoriesList.innerHTML = categories.map(cat => `
+            <div class="category-item ${activeCategoryId === cat.id ? 'active' : ''}">
+                <span class="category-color" style="background:${cat.color}"></span>
+                <span class="category-name">${cat.name}</span>
+                <span class="category-time">${cat.time || ''}</span>
+                <button class="category-delete" data-id="${cat.id}">×</button>
+            </div>
+        `).join('');
+        document.querySelectorAll('.category-item').forEach((div, idx) => {
+            div.addEventListener('click', (e) => { if (!e.target.classList.contains('category-delete')) openCategoryCard(categories[idx]); });
+            div.querySelector('.category-delete').addEventListener('click', async (e) => {
+                e.stopPropagation();
+                const cat = categories[idx];
+                if (confirm(`Удалить "${cat.name}"?`)) {
+                    categories = categories.filter(c => c.id !== cat.id);
+                    Object.keys(dayCategories).forEach(d => { dayCategories[d] = dayCategories[d].filter(id => id !== cat.id); if (!dayCategories[d].length) delete dayCategories[d]; });
+                    if (activeCategoryId === cat.id) activeCategoryId = null;
+                    await persistState();
+                    renderCategories(); renderCalendar();
+                }
+            });
+        });
+    }
+
+    function openCategoryCard(cat) {
+        const palette = ['#FFFFFF','#FF453A','#30D158','#FFD60A','#0A84FF','#BF5AF2','#FF9F0A','#5AC8FA'];
+        let html = `<span class="close" id="modalClose">&times;</span><h4>${cat.name}</h4>
+            <label>Название</label><input id="catName" value="${cat.name}"><br>
+            <label>Время</label><input id="catTime" value="${cat.time||''}"><br>
+            <label>Цвет</label><div class="color-options">${palette.map(c=>`<div class="color-option ${cat.color===c?'selected':''}" style="background:${c}" data-color="${c}"></div>`).join('')}</div>
+            <button class="btn" id="saveCat">Сохранить</button>
+            <button class="btn" id="selectCat">${activeCategoryId===cat.id?'Снять выбор':'Выбрать'}</button>`;
+        els.modalInner.innerHTML = html; els.modal.style.display = 'flex';
+        document.getElementById('modalClose').onclick = ()=> els.modal.style.display='none';
+        let selectedColor = cat.color;
+        document.querySelectorAll('.color-option').forEach(o=> o.addEventListener('click', ()=>{ document.querySelectorAll('.color-option').forEach(x=>x.classList.remove('selected')); o.classList.add('selected'); selectedColor=o.dataset.color; }));
+        document.getElementById('saveCat').onclick = async ()=>{
+            cat.name = document.getElementById('catName').value.trim() || cat.name;
+            cat.time = document.getElementById('catTime').value;
+            cat.color = selectedColor;
+            els.modal.style.display='none';
+            await persistState();
+            renderCategories(); renderCalendar();
+            if (currentView==='standard') updateLists();
+        };
+        document.getElementById('selectCat').onclick = ()=>{ activeCategoryId = activeCategoryId===cat.id ? null : cat.id; els.modal.style.display='none'; renderCategories(); };
+    }
+
+    // Модалки событий/напоминаний
+    function openDetailModal(item) {
+        let content = `<span class="close" id="modalClose">&times;</span>`;
+        if (item.type === 'event') {
+            content += `<h4>Событие</h4><p>${item.text}</p><p>Дата: ${item.date}</p><p>Время: ${item.timeStart||'—'} – ${item.timeEnd||'—'}</p><p>Повтор: ${item.repeat==='none'?'нет':item.repeat}</p>`;
+            content += '<button class="btn danger" id="deleteItem">Удалить</button>';
+        } else {
+            content += `<h4>Напоминание</h4><p>${item.text}</p><p>Дата: ${item.date}</p><p>Время: ${item.time||'не указано'}</p><p>Статус: ${item.completed?'выполнено':'активно'}</p>`;
+            content += '<div class="btn-group"><button class="btn" id="toggleComplete">Выполнено</button><button class="btn" id="linkToNote">Связать заметку</button><button class="btn danger" id="deleteItem">Удалить</button></div>';
+        }
+        els.modalInner.innerHTML = content; els.modal.style.display = 'flex';
+        document.getElementById('modalClose').onclick = ()=> els.modal.style.display='none';
+        if (item.type === 'reminder') {
+            document.getElementById('toggleComplete').onclick = async ()=>{ item.completed = !item.completed; els.modal.style.display='none'; await persistState(); updateLists(); renderCalendar(); };
+            document.getElementById('linkToNote').onclick = async ()=>{
+                els.modal.style.display='none';
+                const title = prompt('Название заметки для напоминания:');
+                if (title) {
+                    const newNote = { id: 'note'+(nextNoteId++), title, date: new Date().toLocaleDateString('ru-RU'), time: '', comment: '', linkedReminderId: item.id, todos: [] };
+                    notes.push(newNote);
+                    item.linkedNoteId = newNote.id;
+                    await persistState();
+                    switchPage('notesPanel');
+                    openNoteEditor(newNote.id);
+                }
+            };
+        }
+        document.getElementById('deleteItem').onclick = async ()=>{
+            eventsData = eventsData.filter(e => e.id !== item.id);
+            els.modal.style.display='none'; await persistState(); renderCalendar(); updateLists();
+        };
+    }
+
+    // Кнопка "+"
+    els.addBtn.addEventListener('click', ()=>{
+        let html = `<span class="close" id="modalClose">&times;</span><h4>Добавить</h4>
+            <div class="btn-group"><button class="btn" id="chooseEvent">Событие</button><button class="btn" id="chooseReminder">Напоминание</button><button class="btn" id="chooseIncome">Доход</button></div>`;
+        els.modalInner.innerHTML = html; els.modal.style.display = 'flex';
+        document.getElementById('modalClose').onclick = ()=> els.modal.style.display='none';
+        document.getElementById('chooseEvent').onclick = ()=> showAddForm('event');
+        document.getElementById('chooseReminder').onclick = ()=> showAddForm('reminder');
+        document.getElementById('chooseIncome').onclick = ()=> showIncomeForm();
+    });
+
+    function showIncomeForm() {
+        let html = `<span class="close" id="modalClose">&times;</span><h4>Доход</h4><p>Дата: ${formatDateLong(selectedDate)}</p>
+            <div class="form-group"><label>Категория</label><select id="incomeCatSelect">${incomeCategories.map(c=>`<option value="${c.id}">${c.name}</option>`).join('')}</select></div>
+            <button class="btn" id="newIncomeCat">+ Новая категория</button>
+            <button class="btn" id="saveIncome" style="margin-top:12px;">Сохранить</button>`;
+        els.modalInner.innerHTML = html;
+        document.getElementById('modalClose').onclick = ()=> els.modal.style.display='none';
+        document.getElementById('newIncomeCat').onclick = ()=>{
+            const name = prompt('Название категории дохода:');
+            if (name) {
+                const newCat = { id: 'inc' + Date.now(), name };
+                incomeCategories.push(newCat);
+                const select = document.getElementById('incomeCatSelect');
+                select.innerHTML += `<option value="${newCat.id}">${newCat.name}</option>`;
+                select.value = newCat.id;
+            }
+        };
+        document.getElementById('saveIncome').onclick = async ()=>{
+            const catId = document.getElementById('incomeCatSelect').value;
+            if (!catId) return;
+            const key = formatDateKey(selectedDate);
+            incomeRecords.push({ id: nextIncomeId++, date: key, categoryId: catId, amount: 0 });
+            await persistState();
+            els.modal.style.display='none';
+            renderCalendar(); updateLists();
+        };
+    }
+
+    function showAddForm(type) {
+        const key = formatDateKey(selectedDate);
+        let formHtml = `<span class="close" id="modalClose">&times;</span><h4>${type==='event'?'Новое событие':'Новое напоминание'}</h4><p>Дата: ${formatDateLong(selectedDate)}</p>`;
+        if (type === 'event') {
+            formHtml += `<div><label>Название</label><input id="evText"></div><div><label>Начало</label><input type="time" id="evStart"></div><div><label>Конец</label><input type="time" id="evEnd"></div><div><label>Повтор</label><select id="evRepeat"><option value="none">Нет</option><option value="daily">Ежедневно</option><option value="weekly">Еженедельно</option><option value="monthly">Ежемесячно</option><option value="yearly">Ежегодно</option></select></div><button class="btn" id="saveEvent">Сохранить</button>`;
+        } else {
+            formHtml += `<div><label>Текст</label><input id="remText"></div><div><label>Время</label><input type="time" id="remTime"></div><button class="btn" id="saveReminder">Сохранить</button>`;
+        }
+        els.modalInner.innerHTML = formHtml;
+        document.getElementById('modalClose').onclick = ()=> els.modal.style.display='none';
+        if (type === 'event') {
+            document.getElementById('saveEvent').onclick = async ()=>{
+                const text = document.getElementById('evText').value.trim(); if (!text) return;
+                eventsData.push({ id: nextId++, date: key, type:'event', text, timeStart: document.getElementById('evStart').value, timeEnd: document.getElementById('evEnd').value, repeat: document.getElementById('evRepeat').value });
+                await persistState(); els.modal.style.display='none'; renderCalendar(); updateLists();
+            };
+        } else {
+            document.getElementById('saveReminder').onclick = async ()=>{
+                const text = document.getElementById('remText').value.trim(); if (!text) return;
+                eventsData.push({ id: nextId++, date: key, type:'reminder', text, time: document.getElementById('remTime').value, completed: false, linkedNoteId: null });
+                await persistState(); els.modal.style.display='none'; renderCalendar(); updateLists();
+            };
+        }
+    }
+
+    // Заметки
+    function renderFilteredNotes() {
+        els.noteEditor.style.display = 'none';
+        document.querySelector('.notes-header').style.display = 'flex';
+        document.querySelector('.filters').style.display = 'flex';
+        els.notesList.style.display = 'block';
+        let filtered = [...notes];
+        if (els.linkFilter.value === 'linked') filtered = filtered.filter(n => n.linkedReminderId);
+        else if (els.linkFilter.value === 'unlinked') filtered = filtered.filter(n => !n.linkedReminderId);
+        if (els.dateFilter.value === 'newest') filtered.sort((a,b) => new Date(b.date) - new Date(a.date));
+        else if (els.dateFilter.value === 'oldest') filtered.sort((a,b) => new Date(a.date) - new Date(b.date));
+        els.notesList.innerHTML = filtered.map(n => `
+            <div class="note-card ${n.linkedReminderId ? 'linked' : ''}" data-note-id="${n.id}">
+                <div class="note-card-header"><span class="note-card-title">${n.title||'Без названия'}</span><span class="note-card-meta">${n.time||''}</span></div>
+                <div class="note-card-meta">${n.date}</div>
+                <div class="note-card-preview">${n.comment ? n.comment.substring(0,50)+(n.comment.length>50?'...':'') : 'Нет описания'}</div>
+            </div>
+        `).join('');
+        document.querySelectorAll('.note-card').forEach(card => card.addEventListener('click', ()=> openNoteEditor(card.dataset.noteId)));
+    }
+
+    function openNoteEditor(noteId) {
+        const note = notes.find(n => n.id === noteId);
+        if (!note) return;
+        document.querySelector('.notes-header').style.display = 'none';
+        document.querySelector('.filters').style.display = 'none';
+        els.notesList.style.display = 'none';
+        els.noteEditor.style.display = 'block';
+        els.noteEditor.innerHTML = `
+            <button class="btn" id="backToNotes">← Назад</button>
+            <h3>${note.title||'Без названия'}</h3><p>${note.date} ${note.time||''}</p>
+            <div style="margin-top:12px;"><textarea id="noteComment" style="width:100%;min-height:80px;background:#1c1c1e;color:#fff;border:1px solid #38383a;border-radius:8px;padding:8px;">${note.comment||''}</textarea></div>
+            <div style="margin-top:16px;"><h4>To-Do</h4><ul id="todoList" class="todo-list"></ul><button class="btn" id="addTodoBtn">+ Добавить задачу</button></div>
+            <div style="margin-top:16px;"><button class="btn danger" id="deleteNote">Удалить заметку</button></div>
+        `;
+        renderTodoList(note);
+        document.getElementById('backToNotes').addEventListener('click', ()=>{
+            note.comment = document.getElementById('noteComment').value;
+            saveTodoList(note);
+            persistState();
+            renderFilteredNotes();
+        });
+        document.getElementById('noteComment').addEventListener('change', ()=>{
+            note.comment = document.getElementById('noteComment').value;
+            persistState();
+        });
+        document.getElementById('addTodoBtn').addEventListener('click', ()=>{
+            if (!note.todos) note.todos = [];
+            note.todos.push({ text:'', done:false });
+            renderTodoList(note);
+            persistState();
+        });
+        document.getElementById('deleteNote').addEventListener('click', async ()=>{
+            if (confirm('Удалить заметку?')) {
+                notes = notes.filter(n => n.id !== noteId);
+                await persistState();
+                renderFilteredNotes();
+            }
+        });
+    }
+
+    function renderTodoList(note) {
+        const list = document.getElementById('todoList');
+        if (!list) return;
+        list.innerHTML = (note.todos||[]).map((todo,i)=>`
+            <li class="todo-item">
+                <input type="checkbox" class="todo-checkbox" ${todo.done?'checked':''} data-index="${i}">
+                <input type="text" class="todo-text ${todo.done?'completed':''}" value="${todo.text}" data-index="${i}" placeholder="Задача...">
+                <button class="delete-btn todo-delete" data-index="${i}">×</button>
+            </li>
+        `).join('');
+        document.querySelectorAll('.todo-checkbox').forEach(cb => cb.addEventListener('change', function(){
+            const idx = parseInt(this.dataset.index);
+            note.todos[idx].done = this.checked;
+            renderTodoList(note);
+            persistState();
+        }));
+        document.querySelectorAll('.todo-text').forEach(input => input.addEventListener('input', function(){
+            note.todos[parseInt(this.dataset.index)].text = this.value;
+            persistState();
+        }));
+        document.querySelectorAll('.todo-delete').forEach(btn => btn.addEventListener('click', function(){
+            note.todos.splice(parseInt(this.dataset.index),1);
+            renderTodoList(note);
+            persistState();
+        }));
+    }
+
+    function saveTodoList(note) {
+        const inputs = document.querySelectorAll('.todo-text');
+        const checkboxes = document.querySelectorAll('.todo-checkbox');
+        if (inputs.length && note.todos) {
+            inputs.forEach((input,i) => {
+                note.todos[i].text = input.value;
+                note.todos[i].done = checkboxes[i].checked;
+            });
+        }
+    }
+
+    els.addNoteBtn.addEventListener('click', ()=>{
+        let html = `<span class="close" id="modalClose">&times;</span><h4>Новая заметка</h4>
+            <div class="form-group"><label>Название</label><input id="noteTitle"></div>
+            <div class="form-group"><label>Дата</label><input type="date" id="noteDate" value="${today.toISOString().split('T')[0]}"></div>
+            <div class="form-group"><label>Время</label><input type="time" id="noteTime"></div>
+            <div class="form-group"><label>Комментарий</label><textarea id="noteComment" style="width:100%;min-height:60px;background:#1c1c1e;color:#fff;border:1px solid #38383a;border-radius:8px;padding:8px;"></textarea></div>
+            <button class="btn" id="saveNote">Сохранить</button>`;
+        els.modalInner.innerHTML = html; els.modal.style.display = 'flex';
+        document.getElementById('modalClose').onclick = ()=> els.modal.style.display='none';
+        document.getElementById('saveNote').addEventListener('click', async ()=>{
+            const title = document.getElementById('noteTitle').value.trim();
+            const date = document.getElementById('noteDate').value;
+            const time = document.getElementById('noteTime').value;
+            const comment = document.getElementById('noteComment').value.trim();
+            if (!title && !comment) return;
+            notes.push({
+                id: 'note' + nextNoteId++,
+                title: title || 'Без названия',
+                date: date || new Date().toLocaleDateString('ru-RU'),
+                time: time || '',
+                comment: comment || '',
+                linkedReminderId: null,
+                todos: []
+            });
+            await persistState();
+            els.modal.style.display='none';
+            renderFilteredNotes();
+        });
+    });
+
+    els.dateFilter.addEventListener('change', renderFilteredNotes);
+    els.linkFilter.addEventListener('change', renderFilteredNotes);
+
+    // Доходы
+    function renderIncomePage() {
+        renderIncomeCategories();
+        const now = new Date();
+        const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+        if (!els.balanceMonth.value) {
+            let options = '';
+            for (let i = -12; i <= 12; i++) {
+                const d = new Date(now.getFullYear(), now.getMonth()+i, 1);
+                const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+                options += `<option value="${key}" ${key===currentMonthKey?'selected':''}>${d.toLocaleDateString('ru-RU',{month:'long',year:'numeric'})}</option>`;
+            }
+            els.balanceMonth.innerHTML = options;
+        }
+        const selectedKey = els.balanceMonth.value || currentMonthKey;
+        const balance = monthlyBalances[selectedKey] || { start:'', end:'' };
+        els.balanceStart.value = balance.start || '';
+        els.balanceEnd.value = balance.end || '';
+        updateBalanceCalculations();
+    }
+
+    function updateBalanceCalculations() {
+        const selectedKey = els.balanceMonth.value;
+        const start = parseFloat(els.balanceStart.value) || 0;
+        const end = parseFloat(els.balanceEnd.value) || 0;
+        const total = incomeRecords.filter(r => r.date.startsWith(selectedKey)).reduce((sum,r) => sum + (r.amount||0), 0);
+        els.totalIncome.textContent = total + ' ₽';
+        const expenses = start + total - end;
+        els.expensesResult.textContent = expenses.toFixed(2) + ' ₽';
+    }
+
+    function renderIncomeCategories() {
+        els.incomeCategoriesList.innerHTML = incomeCategories.map(cat => `
+            <div style="display:flex;align-items:center;padding:8px;background:#2c2c2e;border-radius:8px;margin-bottom:6px;">
+                <span style="flex:1;">${cat.name}</span>
+                <button class="delete-btn" data-id="${cat.id}">×</button>
+            </div>
+        `).join('');
+        document.querySelectorAll('#incomeCategoriesList .delete-btn').forEach(btn => btn.addEventListener('click', async ()=>{
+            incomeCategories = incomeCategories.filter(c => c.id !== btn.dataset.id);
+            await persistState();
+            renderIncomeCategories();
+        }));
+    }
+
+    els.addIncomeCategoryBtn.addEventListener('click', async ()=>{
+        const name = prompt('Название категории дохода:');
+        if (name) {
+            incomeCategories.push({ id:'inc'+Date.now(), name });
+            await persistState();
+            renderIncomeCategories();
+        }
+    });
+
+    els.balanceMonth.addEventListener('change', ()=>{
+        const selectedKey = els.balanceMonth.value;
+        const balance = monthlyBalances[selectedKey] || { start:'', end:'' };
+        els.balanceStart.value = balance.start || '';
+        els.balanceEnd.value = balance.end || '';
+        updateBalanceCalculations();
+    });
+    els.balanceStart.addEventListener('input', updateBalanceCalculations);
+    els.balanceEnd.addEventListener('input', updateBalanceCalculations);
+
+    els.saveBalance.addEventListener('click', async ()=>{
+        const selectedKey = els.balanceMonth.value;
+        const start = parseFloat(els.balanceStart.value) || 0;
+        const end = parseFloat(els.balanceEnd.value) || 0;
+        if (!monthlyBalances[selectedKey]) monthlyBalances[selectedKey] = {};
+        monthlyBalances[selectedKey].start = start;
+        monthlyBalances[selectedKey].end = end;
+        await persistState();
+        alert('Баланс сохранён');
+    });
+
+    els.prevMonth.addEventListener('click', ()=>{
+        if (isCollapsed) currentWeekStart.setDate(currentWeekStart.getDate()-7);
+        else { currentMonth = currentMonth===0?11:currentMonth-1; if (currentMonth===11) currentYear--; }
+        renderCalendar(); if (currentView==='standard') updateLists();
+    });
+    els.nextMonth.addEventListener('click', ()=>{
+        if (isCollapsed) currentWeekStart.setDate(currentWeekStart.getDate()+7);
+        else { currentMonth = currentMonth===11?0:currentMonth+1; if (currentMonth===0) currentYear++; }
+        renderCalendar(); if (currentView==='standard') updateLists();
+    });
+
+    document.querySelectorAll('.nav-item').forEach(btn => btn.addEventListener('click', ()=> switchPage(btn.dataset.page)));
 
     // ---------- PWA установка ----------
     let deferredPrompt;
+    const installBtn = document.getElementById('installBtn');
+    const installInstructions = document.getElementById('installInstructions');
 
     window.addEventListener('beforeinstallprompt', (e) => {
         e.preventDefault();
         deferredPrompt = e;
-        const installBtn = document.getElementById('installBtn');
-        if (installBtn) installBtn.style.display = 'block';
-
-        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-        if (isIOS) {
-            document.getElementById('installInstructions').textContent =
-                'На iPhone/iPad: нажмите кнопку "Поделиться" (в Safari) и выберите "На экран Домой".';
-        }
+        installBtn.style.display = 'block';
     });
 
-    document.getElementById('installBtn')?.addEventListener('click', async () => {
+    installBtn.addEventListener('click', async () => {
         if (deferredPrompt) {
             deferredPrompt.prompt();
             const { outcome } = await deferredPrompt.userChoice;
             console.log('Установка:', outcome);
             deferredPrompt = null;
-            document.getElementById('installBtn').style.display = 'none';
+            installBtn.style.display = 'none';
+        } else {
+            installInstructions.innerHTML = 'Нажмите <b>Поделиться</b> (в Safari) и выберите <b>«На экран Домой»</b>.';
+            installInstructions.style.display = 'block';
         }
     });
 
     window.addEventListener('appinstalled', () => {
-        document.getElementById('installBtn').style.display = 'none';
-        console.log('PWA установлено');
+        installBtn.style.display = 'none';
+        installInstructions.textContent = 'Приложение установлено!';
+        installInstructions.style.display = 'block';
     });
-    // ---------- конец установки ----------
+
+    if (!window.matchMedia('(display-mode: standalone)').matches) {
+        installBtn.style.display = 'block';
+    }
+
+    // Инициализация
+    async function initApp() {
+        await openDB();
+        const saved = await loadData();
+        if (saved) {
+            eventsData = saved.eventsData || eventsData;
+            nextId = saved.nextId || nextId;
+            categories = saved.categories || categories;
+            nextCatId = saved.nextCatId || nextCatId;
+            dayCategories = saved.dayCategories || {};
+            incomeCategories = saved.incomeCategories || [];
+            incomeRecords = saved.incomeRecords || [];
+            nextIncomeId = saved.nextIncomeId || 1;
+            monthlyBalances = saved.monthlyBalances || {};
+            notes = saved.notes || [];
+            nextNoteId = saved.nextNoteId || 1;
+            console.log('Данные загружены из IndexedDB');
+        }
+        switchPage('standardPanel');
+        renderCalendar();
+        updateLists();
+        setInterval(()=>{
+            if (currentPage === 'standardPanel') els.currentTime.textContent = new Date().toLocaleTimeString('ru-RU',{ hour:'2-digit', minute:'2-digit' });
+        }, 60000);
+    }
 
     initApp();
 })();
+</script>
+
+<script>
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('service-worker.js')
+            .then(reg => console.log('SW зарегистрирован'))
+            .catch(err => console.log('Ошибка SW:', err));
+    });
+}
+</script>
+</body>
+</html>
