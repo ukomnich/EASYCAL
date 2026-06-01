@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
     <title>Календарь PWA</title>
     
-    <!-- PWA: манифест и мета-теги для iOS -->
+    <!-- PWA: манифест и поддержка iOS -->
     <link rel="manifest" href="/manifest.json">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -976,27 +976,9 @@
     // Нижняя навигация
     document.querySelectorAll('.nav-item').forEach(btn => btn.addEventListener('click', ()=> switchPage(btn.dataset.page)));
 
-    // Инициализация
-    async function initApp() {
-        await openDB();
-        const saved = await loadData();
-        if (saved) {
-            eventsData = saved.eventsData || eventsData; nextId = saved.nextId || nextId;
-            categories = saved.categories || categories; nextCatId = saved.nextCatId || nextCatId;
-            dayCategories = saved.dayCategories || {};
-            incomeCategories = saved.incomeCategories || []; incomeRecords = saved.incomeRecords || []; nextIncomeId = saved.nextIncomeId || 1;
-            monthlyBalances = saved.monthlyBalances || {};
-            notes = saved.notes || []; nextNoteId = saved.nextNoteId || 1;
-        }
-        switchPage('standardPanel');
-        renderCalendar();
-        updateLists();
-        setInterval(()=>{ if(currentPage==='standardPanel') els.currentTime.textContent = new Date().toLocaleTimeString('ru-RU',{ hour:'2-digit', minute:'2-digit' }); }, 60000);
-    }
+    // ---------- PWA установка ----------
+    let deferredPrompt;
 
-    initApp();
-})();
-</script>
     window.addEventListener('beforeinstallprompt', (e) => {
         e.preventDefault();
         deferredPrompt = e;
