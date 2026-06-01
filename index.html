@@ -3,11 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+    <title>Календарь PWA</title>
+    
+    <!-- PWA: манифест и мета-теги для iOS -->
+    <link rel="manifest" href="/manifest.json">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<link rel="apple-touch-icon" href="/icon-192.png">
-    <title>Календарь PWA</title>
-    <link rel="manifest" href="/manifest.json">
+    <link rel="apple-touch-icon" href="/icon-192.png">
+    
     <style>
         * { margin:0; padding:0; box-sizing:border-box; }
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #000; display: flex; justify-content: center; align-items: flex-start; min-height: 100vh; }
@@ -180,9 +183,17 @@
         </div>
     </div>
 
-    <!-- Заглушки -->
+    <!-- Статистика (заглушка) -->
     <div id="statsPanel" class="page"><div style="padding:20px;">Статистика — скоро</div></div>
-    <div id="settingsPanel" class="page"><div style="padding:20px;">Настройки — скоро</div></div>
+    
+    <!-- Настройки с кнопкой установки -->
+    <div id="settingsPanel" class="page">
+        <div style="padding:20px;">
+            <h3>Настройки</h3>
+            <button id="installBtn" style="display:none; margin-top:20px; padding:12px; background:#0a84ff; color:#fff; border:none; border-radius:8px; width:100%; font-size:1rem;">Установить приложение</button>
+            <p id="installInstructions" style="margin-top:12px; color:#8e8e93;"></p>
+        </div>
+    </div>
 
     <!-- Нижняя навигация -->
     <div class="bottom-nav">
@@ -982,6 +993,38 @@
         updateLists();
         setInterval(()=>{ if(currentPage==='standardPanel') els.currentTime.textContent = new Date().toLocaleTimeString('ru-RU',{ hour:'2-digit', minute:'2-digit' }); }, 60000);
     }
+
+    initApp();
+})();
+</script>
+    window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+        const installBtn = document.getElementById('installBtn');
+        if (installBtn) installBtn.style.display = 'block';
+
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+        if (isIOS) {
+            document.getElementById('installInstructions').textContent =
+                'На iPhone/iPad: нажмите кнопку "Поделиться" (в Safari) и выберите "На экран Домой".';
+        }
+    });
+
+    document.getElementById('installBtn')?.addEventListener('click', async () => {
+        if (deferredPrompt) {
+            deferredPrompt.prompt();
+            const { outcome } = await deferredPrompt.userChoice;
+            console.log('Установка:', outcome);
+            deferredPrompt = null;
+            document.getElementById('installBtn').style.display = 'none';
+        }
+    });
+
+    window.addEventListener('appinstalled', () => {
+        document.getElementById('installBtn').style.display = 'none';
+        console.log('PWA установлено');
+    });
+    // ---------- конец установки ----------
 
     initApp();
 })();
