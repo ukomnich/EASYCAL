@@ -1,13 +1,12 @@
-const CACHE_NAME = 'calendar-pwa-v1';
+const CACHE_NAME = 'calendar-pwa-v2';
 const ASSETS = [
-  '/',
-  '/index.html',
-  '/manifest.json',
-  '/icon-192.png',
-  '/icon-512.png'
+  './',
+  './index.html',
+  './manifest.json',
+  './icon-192.png',
+  './icon-512.png'
 ];
 
-// Установка: кешируем все необходимые файлы
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME)
@@ -16,7 +15,6 @@ self.addEventListener('install', event => {
   );
 });
 
-// Активация: удаляем старые кеши
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys().then(keys => Promise.all(
@@ -25,11 +23,8 @@ self.addEventListener('activate', event => {
   );
 });
 
-// Стратегия «сначала кеш, потом сеть» для статических ресурсов
 self.addEventListener('fetch', event => {
   event.respondWith(
-    caches.match(event.request).then(cached => {
-      return cached || fetch(event.request);
-    })
+    caches.match(event.request).then(cached => cached || fetch(event.request))
   );
 });

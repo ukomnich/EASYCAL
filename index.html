@@ -5,12 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
     <title>Календарь PWA</title>
     
-    <!-- PWA: манифест и поддержка iOS -->
+    <!-- Базовый URL (если репозиторий называется calendar-pwa) -->
     <base href="/calendar-pwa/">
-    <link rel="manifest" href="/manifest.json">
+    
+    <!-- PWA манифест и мета-теги -->
+    <link rel="manifest" href="manifest.json">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <link rel="apple-touch-icon" href="/icon-192.png">
+    <link rel="apple-touch-icon" href="icon-192.png">
     
     <style>
         * { margin:0; padding:0; box-sizing:border-box; }
@@ -26,22 +28,79 @@
         .graph-btn.active, .collapse-btn.active { background:#0a84ff; color:#fff; }
         .weekdays { display:grid; grid-template-columns:repeat(7,1fr); text-align:center; font-size:0.8rem; color:#8e8e93; margin-bottom:4px; }
         .calendar-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:4px; }
-        .day-cell { aspect-ratio:1/1; display:flex; flex-direction:column; align-items:center; justify-content:center; font-size:0.95rem; border-radius:8px; background:rgba(255,255,255,0.08); color:#fff; cursor:pointer; position:relative; border:2px solid transparent; padding:2px; }
+        
+        .day-cell {
+            aspect-ratio: 1 / 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            background: rgba(255,255,255,0.08);
+            border-radius: 8px;
+            cursor: pointer;
+            border: 2px solid transparent;
+            font-size: 0.95rem;
+            color: #fff;
+            overflow: hidden;
+        }
         .day-cell.other-month { color:#555; pointer-events:none; background:rgba(255,255,255,0.03); }
         .day-cell.weekend { color:#ff453a; } .day-cell.weekend.other-month { color:#882222; }
         .day-cell.today { border-color:#0a84ff; background:rgba(10,132,255,0.15); }
         .day-cell.selected { background:#0a84ff; color:#fff!important; border-color:#0a84ff; }
 
         .reminder-indicator, .event-indicator, .income-indicator {
-            position:absolute; top:2px; font-size:0.6rem; font-weight:700; min-width:15px; height:15px; border-radius:8px; display:flex; align-items:center; justify-content:center; padding:0 3px; z-index:1;
+            position: absolute;
+            top: 2px;
+            font-size: 0.6rem;
+            font-weight: 700;
+            min-width: 15px;
+            height: 15px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 3px;
+            z-index: 2;
         }
-        .reminder-indicator { right:2px; background:#30d158; color:#000; }
-        .event-indicator { left:2px; background:#FF9F0A; color:#000; }
-        .income-indicator { left:50%; transform:translateX(-50%); background:#FFD60A; color:#000; }
+        .reminder-indicator { right: 2px; background:#30d158; color:#000; }
+        .event-indicator { left: 2px; background:#FF9F0A; color:#000; }
+        .income-indicator { left: 50%; transform: translateX(-50%); background:#FFD60A; color:#000; }
 
-        .day-content { display:flex; align-items:center; justify-content:center; gap:2px; }
-        .day-label { font-size:0.65rem; font-weight:600; } .day-time { font-size:0.6rem; color:#ccc; margin-top:1px; }
-        .day-categories { display:flex; gap:1px; font-size:0.6rem; font-weight:600; margin-top:1px; justify-content:center; }
+        .day-content {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 2px;
+            width: 100%;
+            height: 100%;
+        }
+        .day-number { line-height: 1; }
+        .day-label { font-size: 0.65rem; font-weight: 600; }
+        
+        .day-categories {
+            position: absolute;
+            bottom: 2px;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: center;
+            gap: 1px;
+            font-size: 0.6rem;
+            font-weight: 600;
+            z-index: 1;
+        }
+        .day-time {
+            position: absolute;
+            bottom: 2px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            font-size: 0.6rem;
+            color: #ccc;
+            z-index: 1;
+        }
 
         .selected-date-time { padding:14px 20px; background:#1c1c1e; border-bottom:1px solid #38383a; display:flex; justify-content:space-between; align-items:center; }
         .add-btn-inline { background:#0a84ff; color:#fff; border:none; font-size:1.5rem; width:36px; height:36px; border-radius:50%; cursor:pointer; display:flex; align-items:center; justify-content:center; margin-left:auto; }
@@ -108,7 +167,6 @@
 </head>
 <body>
 <div id="app">
-    <!-- Главная (календарь) -->
     <div id="standardPanel" class="page active">
         <div class="sticky-header">
             <div class="calendar-container">
@@ -139,7 +197,6 @@
         <div id="graphPanel" class="categories-panel" style="display:none;"></div>
     </div>
 
-    <!-- Заметки -->
     <div id="notesPanel" class="page">
         <div class="notes-container">
             <div class="notes-header">
@@ -163,7 +220,6 @@
         <div id="noteEditor" class="note-editor" style="display:none;"></div>
     </div>
 
-    <!-- Доходы -->
     <div id="incomePanel" class="page">
         <div style="padding:16px;">
             <h2>Доходы и расходы</h2>
@@ -184,10 +240,8 @@
         </div>
     </div>
 
-    <!-- Статистика (заглушка) -->
     <div id="statsPanel" class="page"><div style="padding:20px;">Статистика — скоро</div></div>
     
-    <!-- Настройки с кнопкой установки -->
     <div id="settingsPanel" class="page">
         <div style="padding:20px;">
             <h3>Настройки</h3>
@@ -196,7 +250,6 @@
         </div>
     </div>
 
-    <!-- Нижняя навигация -->
     <div class="bottom-nav">
         <button class="nav-item active" data-page="standardPanel">
             <svg viewBox="0 0 24 24"><path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zm0-12H5V6h14v2z"/></svg>
@@ -225,22 +278,62 @@
 <script>
 (function() {
     // ========== IndexedDB ==========
-    const DB_NAME = 'CalendarPWA', DB_VERSION = 1; let db;
-    async function openDB() {
+    const DB_NAME = 'CalendarPWA', DB_VERSION = 1;
+    let db;
+
+    function openDB() {
         return new Promise((resolve, reject) => {
             const req = indexedDB.open(DB_NAME, DB_VERSION);
-            req.onupgradeneeded = e => { if (!e.target.result.objectStoreNames.contains('appData')) e.target.result.createObjectStore('appData', { keyPath: 'key' }); };
-            req.onsuccess = e => { db = e.target.result; resolve(db); };
-            req.onerror = e => reject(e.target.error);
+            req.onupgradeneeded = (event) => {
+                const database = event.target.result;
+                if (!database.objectStoreNames.contains('appData')) {
+                    database.createObjectStore('appData', { keyPath: 'key' });
+                }
+            };
+            req.onsuccess = (event) => {
+                db = event.target.result;
+                resolve(db);
+            };
+            req.onerror = (event) => reject(event.target.error);
         });
     }
-    async function loadData() { if(!db) await openDB(); return new Promise((resolve, reject) => { const tx = db.transaction('appData','readonly'); const store = tx.objectStore('appData'); const req = store.get('state'); req.onsuccess = () => resolve(req.result?.value); req.onerror = () => reject(req.error); }); }
-    async function saveData(state) { if(!db) await openDB(); return new Promise((resolve, reject) => { const tx = db.transaction('appData','readwrite'); const store = tx.objectStore('appData'); store.put({ key:'state', value:state }); tx.oncomplete = () => resolve(); tx.onerror = () => reject(tx.error); }); }
+
+    async function loadData() {
+        if (!db) await openDB();
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction('appData', 'readonly');
+            const store = tx.objectStore('appData');
+            const request = store.get('state');
+            request.onsuccess = () => resolve(request.result ? request.result.value : null);
+            request.onerror = () => reject(request.error);
+        });
+    }
+
+    async function saveData(state) {
+        if (!db) await openDB();
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction('appData', 'readwrite');
+            const store = tx.objectStore('appData');
+            store.put({ key: 'state', value: state });
+            tx.oncomplete = () => {
+                console.log('Данные сохранены в IndexedDB');
+                resolve();
+            };
+            tx.onerror = (event) => reject(event.target.error);
+        });
+    }
 
     // ========== Глобальные данные ==========
-    let eventsData = [ { id:1, date:'2026-05-30', type:'event', text:'Встреча', timeStart:'10:00', timeEnd:'11:30', repeat:'none' }, { id:2, date:'2026-05-30', type:'reminder', text:'Купить молоко', time:'09:00', completed:false, linkedNoteId:null }, { id:3, date:formatDateKey(new Date()), type:'reminder', text:'Почта', time:'', completed:false } ];
+    let eventsData = [
+        { id:1, date:'2026-05-30', type:'event', text:'Встреча с командой', timeStart:'10:00', timeEnd:'11:30', repeat:'none' },
+        { id:2, date:'2026-05-30', type:'reminder', text:'Купить молоко', time:'09:00', completed:false, linkedNoteId:null },
+        { id:3, date:formatDateKey(new Date()), type:'reminder', text:'Проверить почту', time:'', completed:false, linkedNoteId:null }
+    ];
     let nextId = 5;
-    let categories = [ { id:'cat1', name:'Рабочий', time:'9:00-18:00', color:'#FFFFFF' }, { id:'cat2', name:'Учёба', time:'10:00-14:00', color:'#FF453A' } ];
+    let categories = [
+        { id:'cat1', name:'Рабочий', time:'9:00-18:00', color:'#FFFFFF' },
+        { id:'cat2', name:'Учёба', time:'10:00-14:00', color:'#FF453A' }
+    ];
     let nextCatId = 3;
     let dayCategories = {};
     let activeCategoryId = null;
@@ -266,14 +359,14 @@
     function getMonthName(y,m){ return new Date(y,m).toLocaleDateString('ru-RU',{ month:'long', year:'numeric' }); }
     function getMonday(d){ const day=d.getDay(), diff=(day===0?-6:1-day); const monday=new Date(d); monday.setDate(d.getDate()+diff); monday.setHours(0,0,0,0); return monday; }
 
-    // DOM
+    // DOM элементы
     const els = {
         monthYear: document.getElementById('monthYear'),
         calendarGrid: document.getElementById('calendarGrid'),
         scheduleIncomeList: document.getElementById('scheduleIncomeList'),
         eventsRemindersList: document.getElementById('eventsRemindersList'),
         graphPanel: document.getElementById('graphPanel'),
-        categoriesList: document.getElementById('categoriesList'),
+        categoriesList: null,
         selectedDateLabel: document.getElementById('selectedDateLabel'),
         currentTime: document.getElementById('currentTime'),
         modal: document.getElementById('modal'),
@@ -283,7 +376,7 @@
         addBtn: document.getElementById('addButton'),
         prevMonth: document.getElementById('prevMonth'),
         nextMonth: document.getElementById('nextMonth'),
-        addCategoryBtn: document.getElementById('addCategoryBtn'),
+        addCategoryBtn: null,
         incomeCategoriesList: document.getElementById('incomeCategoriesList'),
         addIncomeCategoryBtn: document.getElementById('addIncomeCategoryBtn'),
         balanceMonth: document.getElementById('balanceMonth'),
@@ -301,9 +394,17 @@
 
     async function persistState() {
         await saveData({
-            eventsData, nextId, categories, nextCatId, dayCategories,
-            incomeCategories, incomeRecords, nextIncomeId, monthlyBalances,
-            notes, nextNoteId
+            eventsData,
+            nextId,
+            categories,
+            nextCatId,
+            dayCategories,
+            incomeCategories,
+            incomeRecords,
+            nextIncomeId,
+            monthlyBalances,
+            notes,
+            nextNoteId
         });
     }
 
@@ -315,18 +416,18 @@
         if (target) target.classList.add('active');
         document.querySelector(`.nav-item[data-page="${pageId}"]`)?.classList.add('active');
         currentPage = pageId;
-        if (pageId === 'notesPanel') { renderFilteredNotes(); }
+        if (pageId === 'notesPanel') renderFilteredNotes();
         if (pageId === 'standardPanel') { renderCalendar(); if (currentView === 'standard') updateLists(); }
-        if (pageId === 'incomePanel') { renderIncomePage(); }
+        if (pageId === 'incomePanel') renderIncomePage();
     }
 
-    // Переключение режима календаря
+    // Режим календаря
     function switchCalendarView(view) {
         currentView = view;
         const viewTabs = document.querySelector('.view-tabs');
         if (view === 'standard') {
-            els.scheduleIncomeList.style.display = currentTab==='scheduleIncome' ? 'block' : 'none';
-            els.eventsRemindersList.style.display = currentTab==='eventsReminders' ? 'block' : 'none';
+            els.scheduleIncomeList.style.display = currentTab === 'scheduleIncome' ? 'block' : 'none';
+            els.eventsRemindersList.style.display = currentTab === 'eventsReminders' ? 'block' : 'none';
             els.graphPanel.style.display = 'none';
             if (viewTabs) viewTabs.style.display = 'flex';
             els.graphToggle.classList.remove('active');
@@ -344,14 +445,18 @@
         if (view === 'standard') updateLists();
     }
 
-    els.graphToggle.addEventListener('click', ()=> switchCalendarView(currentView==='standard'?'graph':'standard'));
-    els.collapseBtn.addEventListener('click', ()=>{
+    els.graphToggle.addEventListener('click', () => switchCalendarView(currentView === 'standard' ? 'graph' : 'standard'));
+    els.collapseBtn.addEventListener('click', () => {
         isCollapsed = !isCollapsed;
         els.collapseBtn.classList.toggle('active', isCollapsed);
-        if (!isCollapsed) { currentMonth = selectedDate.getMonth(); currentYear = selectedDate.getFullYear(); }
-        else { currentWeekStart = getMonday(selectedDate); }
+        if (!isCollapsed) {
+            currentMonth = selectedDate.getMonth();
+            currentYear = selectedDate.getFullYear();
+        } else {
+            currentWeekStart = getMonday(selectedDate);
+        }
         renderCalendar();
-        if (currentView==='standard') updateLists();
+        if (currentView === 'standard') updateLists();
     });
 
     // Табы под датой
@@ -360,8 +465,8 @@
             document.querySelectorAll('.view-tab').forEach(t => t.classList.remove('active'));
             tab.classList.add('active');
             currentTab = tab.dataset.tab;
-            els.scheduleIncomeList.style.display = currentTab==='scheduleIncome' ? 'block' : 'none';
-            els.eventsRemindersList.style.display = currentTab==='eventsReminders' ? 'block' : 'none';
+            els.scheduleIncomeList.style.display = currentTab === 'scheduleIncome' ? 'block' : 'none';
+            els.eventsRemindersList.style.display = currentTab === 'eventsReminders' ? 'block' : 'none';
         });
     });
 
@@ -370,7 +475,7 @@
         let year, month;
         if (isCollapsed) {
             const start = currentWeekStart;
-            const end = new Date(start); end.setDate(start.getDate()+6);
+            const end = new Date(start); end.setDate(start.getDate() + 6);
             year = start.getFullYear(); month = start.getMonth();
             els.monthYear.textContent = `Нед. ${start.getDate()} ${start.toLocaleDateString('ru-RU',{month:'long'})} – ${end.getDate()} ${end.toLocaleDateString('ru-RU',{month:'long'})}`;
         } else {
@@ -382,32 +487,32 @@
 
         if (isCollapsed) {
             const start = new Date(currentWeekStart);
-            for (let i=0; i<7; i++) {
-                const date = new Date(start); date.setDate(start.getDate()+i);
+            for (let i = 0; i < 7; i++) {
+                const date = new Date(start); date.setDate(start.getDate() + i);
                 els.calendarGrid.appendChild(createDayCell(date, formatDateKey(date), todayKey, selectedKey, false));
             }
         } else {
             const firstDay = new Date(year, month, 1);
-            const lastDay = new Date(year, month+1, 0);
+            const lastDay = new Date(year, month + 1, 0);
             const daysInMonth = lastDay.getDate();
             let startDayIndex = (firstDay.getDay() + 6) % 7;
             const prevMonthLastDay = new Date(year, month, 0).getDate();
 
-            for (let i=0; i<42; i++) {
+            for (let i = 0; i < 42; i++) {
                 let dayNum, dateKey, isOtherMonth = false;
                 if (i < startDayIndex) {
                     dayNum = prevMonthLastDay - startDayIndex + i + 1;
-                    const prevM = month===0?11:month-1, prevY = month===0?year-1:year;
-                    dateKey = `${prevY}-${String(prevM+1).padStart(2,'0')}-${String(dayNum).padStart(2,'0')}`;
+                    const prevM = month === 0 ? 11 : month - 1, prevY = month === 0 ? year - 1 : year;
+                    dateKey = `${prevY}-${String(prevM + 1).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
                     isOtherMonth = true;
                 } else if (i >= startDayIndex + daysInMonth) {
                     dayNum = i - startDayIndex - daysInMonth + 1;
-                    const nextM = month===11?0:month+1, nextY = month===11?year+1:year;
-                    dateKey = `${nextY}-${String(nextM+1).padStart(2,'0')}-${String(dayNum).padStart(2,'0')}`;
+                    const nextM = month === 11 ? 0 : month + 1, nextY = month === 11 ? year + 1 : year;
+                    dateKey = `${nextY}-${String(nextM + 1).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
                     isOtherMonth = true;
                 } else {
                     dayNum = i - startDayIndex + 1;
-                    dateKey = `${year}-${String(month+1).padStart(2,'0')}-${String(dayNum).padStart(2,'0')}`;
+                    dateKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
                 }
                 const date = new Date(dateKey);
                 els.calendarGrid.appendChild(createDayCell(date, dateKey, todayKey, selectedKey, isOtherMonth));
@@ -418,59 +523,69 @@
     function createDayCell(date, dateKey, todayKey, selectedKey, isOtherMonth) {
         const cell = document.createElement('div');
         cell.className = 'day-cell';
-        const dow = (date.getDay()+6)%7;
+        const dow = (date.getDay() + 6) % 7;
         if (isOtherMonth && !isCollapsed) cell.classList.add('other-month');
-        if (dow===5 || dow===6) cell.classList.add('weekend');
-        if (dateKey===todayKey) cell.classList.add('today');
-        if (dateKey===selectedKey && currentView==='standard') cell.classList.add('selected');
+        if (dow === 5 || dow === 6) cell.classList.add('weekend');
+        if (dateKey === todayKey) cell.classList.add('today');
+        if (dateKey === selectedKey && currentView === 'standard') cell.classList.add('selected');
 
-        const remindersCount = eventsData.filter(e=>e.date===dateKey && e.type==='reminder').length;
-        const eventsCount = eventsData.filter(e=>e.date===dateKey && e.type==='event').length;
-        const hasIncome = incomeRecords.some(r=>r.date===dateKey);
+        // Индикаторы (абсолютное позиционирование)
+        const remindersCount = eventsData.filter(e => e.date === dateKey && e.type === 'reminder').length;
+        const eventsCount = eventsData.filter(e => e.date === dateKey && e.type === 'event').length;
+        const hasIncome = incomeRecords.some(r => r.date === dateKey);
 
         if (remindersCount) {
-            const ind = document.createElement('span'); ind.className='reminder-indicator'; ind.textContent=remindersCount; cell.appendChild(ind);
+            const ind = document.createElement('span'); ind.className = 'reminder-indicator'; ind.textContent = remindersCount; cell.appendChild(ind);
         }
         if (eventsCount) {
-            const ind = document.createElement('span'); ind.className='event-indicator'; ind.textContent=eventsCount; cell.appendChild(ind);
+            const ind = document.createElement('span'); ind.className = 'event-indicator'; ind.textContent = eventsCount; cell.appendChild(ind);
         }
         if (hasIncome) {
-            const ind = document.createElement('span'); ind.className='income-indicator'; ind.textContent='₽'; cell.appendChild(ind);
+            const ind = document.createElement('span'); ind.className = 'income-indicator'; ind.textContent = '₽'; cell.appendChild(ind);
         }
 
-        const contentDiv = document.createElement('div'); contentDiv.className='day-content';
-        const numberSpan = document.createElement('span'); numberSpan.textContent = date.getDate();
+        // Основной контент (число + буква)
+        const contentDiv = document.createElement('div'); contentDiv.className = 'day-content';
+        const numberSpan = document.createElement('span'); numberSpan.className = 'day-number'; numberSpan.textContent = date.getDate();
         const dayCats = dayCategories[dateKey] || [];
         if (dayCats.length) {
-            const cat = categories.find(c=>c.id===dayCats[0]);
+            const cat = categories.find(c => c.id === dayCats[0]);
             if (cat) numberSpan.style.color = cat.color;
-            const letter = document.createElement('span'); letter.className='day-label';
-            letter.style.color = cat?.color || '#fff'; letter.textContent = cat?.name.charAt(0).toUpperCase() || '';
-            contentDiv.appendChild(numberSpan); contentDiv.appendChild(letter);
+            const letter = document.createElement('span'); letter.className = 'day-label';
+            letter.style.color = cat?.color || '#fff';
+            letter.textContent = cat?.name.charAt(0).toUpperCase() || '';
+            contentDiv.appendChild(numberSpan);
+            contentDiv.appendChild(letter);
         } else {
             contentDiv.appendChild(numberSpan);
         }
         cell.appendChild(contentDiv);
 
+        // Доп. категории или время (тоже абсолют)
         if (dayCats.length >= 2) {
-            const catDiv = document.createElement('div'); catDiv.className='day-categories';
-            dayCats.forEach(id=>{ const c=categories.find(x=>x.id===id); if(c){ const s=document.createElement('span'); s.textContent=c.name.charAt(0); s.style.color=c.color; catDiv.appendChild(s); } });
+            const catDiv = document.createElement('div'); catDiv.className = 'day-categories';
+            dayCats.forEach(id => {
+                const c = categories.find(x => x.id === id);
+                if (c) { const s = document.createElement('span'); s.textContent = c.name.charAt(0); s.style.color = c.color; catDiv.appendChild(s); }
+            });
             cell.appendChild(catDiv);
         } else if (dayCats.length === 1) {
-            const cat = categories.find(c=>c.id===dayCats[0]);
-            if (cat?.time) { const t=document.createElement('span'); t.className='day-time'; t.textContent=cat.time; cell.appendChild(t); }
+            const cat = categories.find(c => c.id === dayCats[0]);
+            if (cat?.time) {
+                const t = document.createElement('span'); t.className = 'day-time'; t.textContent = cat.time; cell.appendChild(t);
+            }
         }
 
-        cell.addEventListener('click', ()=>{
+        cell.addEventListener('click', () => {
             if (isOtherMonth && !isCollapsed) return;
-            if (currentView==='standard') {
+            if (currentView === 'standard') {
                 selectedDate = new Date(dateKey);
                 if (!isCollapsed) { currentMonth = selectedDate.getMonth(); currentYear = selectedDate.getFullYear(); }
                 renderCalendar();
                 updateLists();
             } else if (activeCategoryId) {
                 let cats = dayCategories[dateKey] || [];
-                cats = cats.includes(activeCategoryId) ? cats.filter(id=>id!==activeCategoryId) : [...cats, activeCategoryId];
+                cats = cats.includes(activeCategoryId) ? cats.filter(id => id !== activeCategoryId) : [...cats, activeCategoryId];
                 if (cats.length) dayCategories[dateKey] = cats; else delete dayCategories[dateKey];
                 renderCalendar();
                 renderCategories();
@@ -484,77 +599,86 @@
         els.selectedDateLabel.textContent = formatDateLong(selectedDate);
         const key = formatDateKey(selectedDate);
         const scheduleCatIds = dayCategories[key] || [];
-        const evs = eventsData.filter(e=>e.date===key && e.type==='event');
-        const rems = eventsData.filter(e=>e.date===key && e.type==='reminder');
-        const incomes = incomeRecords.filter(r=>r.date===key);
+        const evs = eventsData.filter(e => e.date === key && e.type === 'event');
+        const rems = eventsData.filter(e => e.date === key && e.type === 'reminder');
+        const incomes = incomeRecords.filter(r => r.date === key);
 
+        // Расписание и доходы
         let html1 = '';
         if (incomes.length) {
             incomes.forEach(inc => {
-                const cat = incomeCategories.find(c=>c.id===inc.categoryId);
+                const cat = incomeCategories.find(c => c.id === inc.categoryId);
                 html1 += `<div class="income-item">
                     <span>${cat?.name || 'Доход'}</span>
-                    <input type="number" class="income-amount" value="${inc.amount||''}" data-id="${inc.id}" placeholder="Сумма">
+                    <input type="number" class="income-amount" value="${inc.amount || ''}" data-id="${inc.id}" placeholder="Сумма">
                     <button class="delete-btn" data-id="${inc.id}">×</button>
                 </div>`;
             });
         }
         if (scheduleCatIds.length) {
-            scheduleCatIds.forEach(id=>{
-                const cat = categories.find(c=>c.id===id);
-                if (cat) html1 += `<div class="schedule-item"><span style="color:${cat.color}">${cat.name}</span><span>${cat.time||'—'}</span></div>`;
+            scheduleCatIds.forEach(id => {
+                const cat = categories.find(c => c.id === id);
+                if (cat) html1 += `<div class="schedule-item"><span style="color:${cat.color}">${cat.name}</span><span>${cat.time || '—'}</span></div>`;
             });
         }
         if (!incomes.length && !scheduleCatIds.length) html1 = '<p style="color:#8e8e93; padding:8px 0;">Нет доходов и расписания</p>';
         els.scheduleIncomeList.innerHTML = html1;
 
+        // События и напоминания
         let html2 = '';
-        if (evs.length) evs.forEach(ev=> html2 += `<div class="event-item">${ev.text} (${ev.timeStart||'?'}-${ev.timeEnd||'?'})</div>`);
+        if (evs.length) evs.forEach(ev => html2 += `<div class="event-item">${ev.text} (${ev.timeStart || '?'}-${ev.timeEnd || '?'})</div>`);
         else html2 += '<p style="color:#8e8e93; padding:8px 0;">Нет событий</p>';
         if (rems.length) {
-            rems.forEach(rem=> {
-                const linkedNote = rem.linkedNoteId ? notes.find(n=>n.id===rem.linkedNoteId) : null;
-                html2 += `<div class="reminder-item ${rem.completed?'completed':''}">
+            rems.forEach(rem => {
+                const linkedNote = rem.linkedNoteId ? notes.find(n => n.id === rem.linkedNoteId) : null;
+                html2 += `<div class="reminder-item ${rem.completed ? 'completed' : ''}">
                     <div class="reminder-left">
-                        <span>${rem.text} ${rem.time||''}</span>
+                        <span>${rem.text} ${rem.time || ''}</span>
                         ${linkedNote ? `<span class="note-icon" data-note-id="${linkedNote.id}">📄</span>` : ''}
                     </div>
-                    <input type="checkbox" class="reminder-checkbox" ${rem.completed?'checked':''}>
+                    <input type="checkbox" class="reminder-checkbox" ${rem.completed ? 'checked' : ''}>
                 </div>`;
             });
         } else html2 += '<p style="color:#8e8e93; padding:8px 0;">Нет напоминаний</p>';
         els.eventsRemindersList.innerHTML = html2;
 
-        document.querySelectorAll('.income-amount').forEach(inp => inp.addEventListener('change', async function(){
-            const rec = incomeRecords.find(r=>r.id===parseInt(this.dataset.id));
-            if(rec) { rec.amount = parseFloat(this.value)||0; await persistState(); }
+        // Обработчики
+        document.querySelectorAll('.income-amount').forEach(inp => inp.addEventListener('change', async function() {
+            const rec = incomeRecords.find(r => r.id === parseInt(this.dataset.id));
+            if (rec) { rec.amount = parseFloat(this.value) || 0; await persistState(); }
         }));
-        document.querySelectorAll('.income-item .delete-btn').forEach(btn => btn.addEventListener('click', async function(){
-            incomeRecords = incomeRecords.filter(r=>r.id!==parseInt(this.dataset.id));
-            await persistState(); updateLists(); renderCalendar();
+        document.querySelectorAll('.income-item .delete-btn').forEach(btn => btn.addEventListener('click', async function() {
+            incomeRecords = incomeRecords.filter(r => r.id !== parseInt(this.dataset.id));
+            await persistState();
+            updateLists(); renderCalendar();
         }));
-        document.querySelectorAll('.event-item').forEach((div,idx)=> div.addEventListener('click', ()=> openDetailModal(evs[idx])));
-        document.querySelectorAll('.reminder-item').forEach((div,idx)=>{
+        document.querySelectorAll('.event-item').forEach((div, idx) => div.addEventListener('click', () => openDetailModal(evs[idx])));
+        document.querySelectorAll('.reminder-item').forEach((div, idx) => {
             const rem = rems[idx];
-            div.querySelector('.reminder-checkbox').addEventListener('change', async e=>{ e.stopPropagation(); rem.completed = e.target.checked; await persistState(); updateLists(); });
-            div.addEventListener('click', e=>{
+            div.querySelector('.reminder-checkbox').addEventListener('change', async e => {
+                e.stopPropagation();
+                rem.completed = e.target.checked;
+                await persistState();
+                updateLists();
+            });
+            div.addEventListener('click', e => {
                 if (e.target.classList.contains('note-icon')) {
-                    const note = notes.find(n=>n.id===e.target.dataset.noteId);
+                    const note = notes.find(n => n.id === e.target.dataset.noteId);
                     if (note) { switchPage('notesPanel'); openNoteEditor(note.id); }
                     return;
                 }
-                if (e.target.tagName!=='INPUT') openDetailModal(rem);
+                if (e.target.tagName !== 'INPUT') openDetailModal(rem);
             });
         });
     }
 
-    // График
+    // Категории графика
     function renderCategories() {
         if (!els.categoriesList) {
             els.graphPanel.innerHTML = '<h3>Категории графика</h3><div id="categoriesList"></div><button class="add-category-btn" id="addCategoryBtn">+ Добавить категорию</button>';
             els.categoriesList = document.getElementById('categoriesList');
             els.addCategoryBtn = document.getElementById('addCategoryBtn');
-            els.addCategoryBtn.addEventListener('click', ()=>{
+            els.addCategoryBtn.addEventListener('click', () => {
                 const name = prompt('Название:');
                 if (!name) return;
                 const time = prompt('Время (можно пусто):') || '';
@@ -565,11 +689,11 @@
                 persistState();
             });
         }
-        els.categoriesList.innerHTML = categories.map(cat=>`
-            <div class="category-item ${activeCategoryId===cat.id?'active':''}">
+        els.categoriesList.innerHTML = categories.map(cat => `
+            <div class="category-item ${activeCategoryId === cat.id ? 'active' : ''}">
                 <span class="category-color" style="background:${cat.color}"></span>
                 <span class="category-name">${cat.name}</span>
-                <span class="category-time">${cat.time||''}</span>
+                <span class="category-time">${cat.time || ''}</span>
                 <button class="category-delete" data-id="${cat.id}">×</button>
             </div>
         `).join('');
@@ -579,9 +703,9 @@
                 e.stopPropagation();
                 const cat = categories[idx];
                 if (confirm(`Удалить "${cat.name}"?`)) {
-                    categories = categories.filter(c=>c.id!==cat.id);
-                    Object.keys(dayCategories).forEach(d=>{ dayCategories[d] = dayCategories[d].filter(id=>id!==cat.id); if(!dayCategories[d].length) delete dayCategories[d]; });
-                    if (activeCategoryId===cat.id) activeCategoryId=null;
+                    categories = categories.filter(c => c.id !== cat.id);
+                    Object.keys(dayCategories).forEach(d => { dayCategories[d] = dayCategories[d].filter(id => id !== cat.id); if (!dayCategories[d].length) delete dayCategories[d]; });
+                    if (activeCategoryId === cat.id) activeCategoryId = null;
                     await persistState();
                     renderCategories(); renderCalendar();
                 }
@@ -616,7 +740,7 @@
     // Модалки событий/напоминаний
     function openDetailModal(item) {
         let content = `<span class="close" id="modalClose">&times;</span>`;
-        if (item.type==='event') {
+        if (item.type === 'event') {
             content += `<h4>Событие</h4><p>${item.text}</p><p>Дата: ${item.date}</p><p>Время: ${item.timeStart||'—'} – ${item.timeEnd||'—'}</p><p>Повтор: ${item.repeat==='none'?'нет':item.repeat}</p>`;
             content += '<button class="btn danger" id="deleteItem">Удалить</button>';
         } else {
@@ -625,7 +749,7 @@
         }
         els.modalInner.innerHTML = content; els.modal.style.display = 'flex';
         document.getElementById('modalClose').onclick = ()=> els.modal.style.display='none';
-        if (item.type==='reminder') {
+        if (item.type === 'reminder') {
             document.getElementById('toggleComplete').onclick = async ()=>{ item.completed = !item.completed; els.modal.style.display='none'; await persistState(); updateLists(); renderCalendar(); };
             document.getElementById('linkToNote').onclick = async ()=>{
                 els.modal.style.display='none';
@@ -641,12 +765,12 @@
             };
         }
         document.getElementById('deleteItem').onclick = async ()=>{
-            eventsData = eventsData.filter(e=> e.id !== item.id);
+            eventsData = eventsData.filter(e => e.id !== item.id);
             els.modal.style.display='none'; await persistState(); renderCalendar(); updateLists();
         };
     }
 
-    // Добавление через "+"
+    // Кнопка "+" в календаре
     els.addBtn.addEventListener('click', ()=>{
         let html = `<span class="close" id="modalClose">&times;</span><h4>Добавить</h4>
             <div class="btn-group"><button class="btn" id="chooseEvent">Событие</button><button class="btn" id="chooseReminder">Напоминание</button><button class="btn" id="chooseIncome">Доход</button></div>`;
@@ -688,14 +812,14 @@
     function showAddForm(type) {
         const key = formatDateKey(selectedDate);
         let formHtml = `<span class="close" id="modalClose">&times;</span><h4>${type==='event'?'Новое событие':'Новое напоминание'}</h4><p>Дата: ${formatDateLong(selectedDate)}</p>`;
-        if (type==='event') {
+        if (type === 'event') {
             formHtml += `<div><label>Название</label><input id="evText"></div><div><label>Начало</label><input type="time" id="evStart"></div><div><label>Конец</label><input type="time" id="evEnd"></div><div><label>Повтор</label><select id="evRepeat"><option value="none">Нет</option><option value="daily">Ежедневно</option><option value="weekly">Еженедельно</option><option value="monthly">Ежемесячно</option><option value="yearly">Ежегодно</option></select></div><button class="btn" id="saveEvent">Сохранить</button>`;
         } else {
             formHtml += `<div><label>Текст</label><input id="remText"></div><div><label>Время</label><input type="time" id="remTime"></div><button class="btn" id="saveReminder">Сохранить</button>`;
         }
         els.modalInner.innerHTML = formHtml;
         document.getElementById('modalClose').onclick = ()=> els.modal.style.display='none';
-        if (type==='event') {
+        if (type === 'event') {
             document.getElementById('saveEvent').onclick = async ()=>{
                 const text = document.getElementById('evText').value.trim(); if (!text) return;
                 eventsData.push({ id: nextId++, date: key, type:'event', text, timeStart: document.getElementById('evStart').value, timeEnd: document.getElementById('evEnd').value, repeat: document.getElementById('evRepeat').value });
@@ -710,86 +834,59 @@
         }
     }
 
-    // ========== ЗАМЕТКИ ==========
+    // Заметки
     function renderFilteredNotes() {
         els.noteEditor.style.display = 'none';
         document.querySelector('.notes-header').style.display = 'flex';
         document.querySelector('.filters').style.display = 'flex';
         els.notesList.style.display = 'block';
-
         let filtered = [...notes];
-        const linkFilter = els.linkFilter.value;
-        if (linkFilter === 'linked') filtered = filtered.filter(n => n.linkedReminderId);
-        else if (linkFilter === 'unlinked') filtered = filtered.filter(n => !n.linkedReminderId);
-
-        const dateFilter = els.dateFilter.value;
-        if (dateFilter === 'newest') filtered.sort((a,b) => new Date(b.date) - new Date(a.date));
-        else if (dateFilter === 'oldest') filtered.sort((a,b) => new Date(a.date) - new Date(b.date));
-
+        if (els.linkFilter.value === 'linked') filtered = filtered.filter(n => n.linkedReminderId);
+        else if (els.linkFilter.value === 'unlinked') filtered = filtered.filter(n => !n.linkedReminderId);
+        if (els.dateFilter.value === 'newest') filtered.sort((a,b) => new Date(b.date) - new Date(a.date));
+        else if (els.dateFilter.value === 'oldest') filtered.sort((a,b) => new Date(a.date) - new Date(b.date));
         els.notesList.innerHTML = filtered.map(n => `
             <div class="note-card ${n.linkedReminderId ? 'linked' : ''}" data-note-id="${n.id}">
-                <div class="note-card-header">
-                    <span class="note-card-title">${n.title || 'Без названия'}</span>
-                    <span class="note-card-meta">${n.time || ''}</span>
-                </div>
+                <div class="note-card-header"><span class="note-card-title">${n.title||'Без названия'}</span><span class="note-card-meta">${n.time||''}</span></div>
                 <div class="note-card-meta">${n.date}</div>
-                <div class="note-card-preview">${n.comment ? n.comment.substring(0, 50) + (n.comment.length > 50 ? '...' : '') : 'Нет описания'}</div>
+                <div class="note-card-preview">${n.comment ? n.comment.substring(0,50)+(n.comment.length>50?'...':'') : 'Нет описания'}</div>
             </div>
         `).join('');
-
-        document.querySelectorAll('.note-card').forEach(card => {
-            card.addEventListener('click', () => openNoteEditor(card.dataset.noteId));
-        });
+        document.querySelectorAll('.note-card').forEach(card => card.addEventListener('click', ()=> openNoteEditor(card.dataset.noteId)));
     }
 
     function openNoteEditor(noteId) {
         const note = notes.find(n => n.id === noteId);
         if (!note) return;
-
         document.querySelector('.notes-header').style.display = 'none';
         document.querySelector('.filters').style.display = 'none';
         els.notesList.style.display = 'none';
         els.noteEditor.style.display = 'block';
-
         els.noteEditor.innerHTML = `
             <button class="btn" id="backToNotes">← Назад</button>
-            <h3>${note.title || 'Без названия'}</h3>
-            <p>${note.date} ${note.time || ''}</p>
-            <div style="margin-top:12px;">
-                <textarea id="noteComment" style="width:100%; min-height:80px; background:#1c1c1e; color:#fff; border:1px solid #38383a; border-radius:8px; padding:8px;">${note.comment || ''}</textarea>
-            </div>
-            <div style="margin-top:16px;">
-                <h4>To-Do список</h4>
-                <ul id="todoList" class="todo-list"></ul>
-                <button class="btn" id="addTodoBtn">+ Добавить задачу</button>
-            </div>
-            <div style="margin-top:16px;">
-                <button class="btn danger" id="deleteNote">Удалить заметку</button>
-            </div>
+            <h3>${note.title||'Без названия'}</h3><p>${note.date} ${note.time||''}</p>
+            <div style="margin-top:12px;"><textarea id="noteComment" style="width:100%;min-height:80px;background:#1c1c1e;color:#fff;border:1px solid #38383a;border-radius:8px;padding:8px;">${note.comment||''}</textarea></div>
+            <div style="margin-top:16px;"><h4>To-Do</h4><ul id="todoList" class="todo-list"></ul><button class="btn" id="addTodoBtn">+ Добавить задачу</button></div>
+            <div style="margin-top:16px;"><button class="btn danger" id="deleteNote">Удалить заметку</button></div>
         `;
-
         renderTodoList(note);
-
-        document.getElementById('backToNotes').addEventListener('click', () => {
+        document.getElementById('backToNotes').addEventListener('click', ()=>{
             note.comment = document.getElementById('noteComment').value;
             saveTodoList(note);
             persistState();
             renderFilteredNotes();
         });
-
-        document.getElementById('noteComment').addEventListener('change', () => {
+        document.getElementById('noteComment').addEventListener('change', ()=>{
             note.comment = document.getElementById('noteComment').value;
             persistState();
         });
-
-        document.getElementById('addTodoBtn').addEventListener('click', () => {
+        document.getElementById('addTodoBtn').addEventListener('click', ()=>{
             if (!note.todos) note.todos = [];
-            note.todos.push({ text: '', done: false });
+            note.todos.push({ text:'', done:false });
             renderTodoList(note);
             persistState();
         });
-
-        document.getElementById('deleteNote').addEventListener('click', async () => {
+        document.getElementById('deleteNote').addEventListener('click', async ()=>{
             if (confirm('Удалить заметку?')) {
                 notes = notes.filter(n => n.id !== noteId);
                 await persistState();
@@ -801,62 +898,49 @@
     function renderTodoList(note) {
         const list = document.getElementById('todoList');
         if (!list) return;
-        list.innerHTML = (note.todos || []).map((todo, i) => `
+        list.innerHTML = (note.todos||[]).map((todo,i)=>`
             <li class="todo-item">
-                <input type="checkbox" class="todo-checkbox" ${todo.done ? 'checked' : ''} data-index="${i}">
-                <input type="text" class="todo-text ${todo.done ? 'completed' : ''}" value="${todo.text}" data-index="${i}" placeholder="Задача...">
+                <input type="checkbox" class="todo-checkbox" ${todo.done?'checked':''} data-index="${i}">
+                <input type="text" class="todo-text ${todo.done?'completed':''}" value="${todo.text}" data-index="${i}" placeholder="Задача...">
                 <button class="delete-btn todo-delete" data-index="${i}">×</button>
             </li>
         `).join('');
-
-        document.querySelectorAll('.todo-checkbox').forEach(cb => {
-            cb.addEventListener('change', function() {
-                const idx = parseInt(this.dataset.index);
-                note.todos[idx].done = this.checked;
-                renderTodoList(note);
-                persistState();
-            });
-        });
-
-        document.querySelectorAll('.todo-text').forEach(input => {
-            input.addEventListener('input', function() {
-                const idx = parseInt(this.dataset.index);
-                note.todos[idx].text = this.value;
-                persistState();
-            });
-        });
-
-        document.querySelectorAll('.todo-delete').forEach(btn => {
-            btn.addEventListener('click', function() {
-                const idx = parseInt(this.dataset.index);
-                note.todos.splice(idx, 1);
-                renderTodoList(note);
-                persistState();
-            });
-        });
+        document.querySelectorAll('.todo-checkbox').forEach(cb => cb.addEventListener('change', function(){
+            const idx = parseInt(this.dataset.index);
+            note.todos[idx].done = this.checked;
+            renderTodoList(note);
+            persistState();
+        }));
+        document.querySelectorAll('.todo-text').forEach(input => input.addEventListener('input', function(){
+            note.todos[parseInt(this.dataset.index)].text = this.value;
+            persistState();
+        }));
+        document.querySelectorAll('.todo-delete').forEach(btn => btn.addEventListener('click', function(){
+            note.todos.splice(parseInt(this.dataset.index),1);
+            renderTodoList(note);
+            persistState();
+        }));
     }
 
     function saveTodoList(note) {
         const inputs = document.querySelectorAll('.todo-text');
         const checkboxes = document.querySelectorAll('.todo-checkbox');
         if (inputs.length && note.todos) {
-            inputs.forEach((input, i) => {
+            inputs.forEach((input,i) => {
                 note.todos[i].text = input.value;
                 note.todos[i].done = checkboxes[i].checked;
             });
         }
     }
 
-    // Создание заметки
-    els.addNoteBtn.addEventListener('click', () => {
+    els.addNoteBtn.addEventListener('click', ()=>{
         let html = `<span class="close" id="modalClose">&times;</span><h4>Новая заметка</h4>
             <div class="form-group"><label>Название</label><input id="noteTitle"></div>
             <div class="form-group"><label>Дата</label><input type="date" id="noteDate" value="${today.toISOString().split('T')[0]}"></div>
             <div class="form-group"><label>Время</label><input type="time" id="noteTime"></div>
-            <div class="form-group"><label>Комментарий</label><textarea id="noteComment" style="width:100%; min-height:60px; background:#1c1c1e; color:#fff; border:1px solid #38383a; border-radius:8px; padding:8px;"></textarea></div>
+            <div class="form-group"><label>Комментарий</label><textarea id="noteComment" style="width:100%;min-height:60px;background:#1c1c1e;color:#fff;border:1px solid #38383a;border-radius:8px;padding:8px;"></textarea></div>
             <button class="btn" id="saveNote">Сохранить</button>`;
-        els.modalInner.innerHTML = html;
-        els.modal.style.display = 'flex';
+        els.modalInner.innerHTML = html; els.modal.style.display = 'flex';
         document.getElementById('modalClose').onclick = ()=> els.modal.style.display='none';
         document.getElementById('saveNote').addEventListener('click', async ()=>{
             const title = document.getElementById('noteTitle').value.trim();
@@ -879,11 +963,10 @@
         });
     });
 
-    // Фильтры
     els.dateFilter.addEventListener('change', renderFilteredNotes);
     els.linkFilter.addEventListener('change', renderFilteredNotes);
 
-    // ========== ДОХОДЫ ==========
+    // Доходы
     function renderIncomePage() {
         renderIncomeCategories();
         const now = new Date();
@@ -891,14 +974,14 @@
         if (!els.balanceMonth.value) {
             let options = '';
             for (let i = -12; i <= 12; i++) {
-                const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
+                const d = new Date(now.getFullYear(), now.getMonth()+i, 1);
                 const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
-                options += `<option value="${key}" ${key===currentMonthKey?'selected':''}>${d.toLocaleDateString('ru-RU', { month:'long', year:'numeric' })}</option>`;
+                options += `<option value="${key}" ${key===currentMonthKey?'selected':''}>${d.toLocaleDateString('ru-RU',{month:'long',year:'numeric'})}</option>`;
             }
             els.balanceMonth.innerHTML = options;
         }
         const selectedKey = els.balanceMonth.value || currentMonthKey;
-        const balance = monthlyBalances[selectedKey] || { start: '', end: '' };
+        const balance = monthlyBalances[selectedKey] || { start:'', end:'' };
         els.balanceStart.value = balance.start || '';
         els.balanceEnd.value = balance.end || '';
         updateBalanceCalculations();
@@ -908,7 +991,7 @@
         const selectedKey = els.balanceMonth.value;
         const start = parseFloat(els.balanceStart.value) || 0;
         const end = parseFloat(els.balanceEnd.value) || 0;
-        const total = incomeRecords.filter(r => r.date.startsWith(selectedKey)).reduce((sum, r) => sum + (r.amount || 0), 0);
+        const total = incomeRecords.filter(r => r.date.startsWith(selectedKey)).reduce((sum,r) => sum + (r.amount||0), 0);
         els.totalIncome.textContent = total + ' ₽';
         const expenses = start + total - end;
         els.expensesResult.textContent = expenses.toFixed(2) + ' ₽';
@@ -916,42 +999,38 @@
 
     function renderIncomeCategories() {
         els.incomeCategoriesList.innerHTML = incomeCategories.map(cat => `
-            <div style="display:flex; align-items:center; padding:8px; background:#2c2c2e; border-radius:8px; margin-bottom:6px;">
+            <div style="display:flex;align-items:center;padding:8px;background:#2c2c2e;border-radius:8px;margin-bottom:6px;">
                 <span style="flex:1;">${cat.name}</span>
                 <button class="delete-btn" data-id="${cat.id}">×</button>
             </div>
         `).join('');
-        document.querySelectorAll('#incomeCategoriesList .delete-btn').forEach(btn => {
-            btn.addEventListener('click', async (e) => {
-                const id = btn.dataset.id;
-                incomeCategories = incomeCategories.filter(c => c.id !== id);
-                await persistState();
-                renderIncomeCategories();
-            });
-        });
+        document.querySelectorAll('#incomeCategoriesList .delete-btn').forEach(btn => btn.addEventListener('click', async ()=>{
+            incomeCategories = incomeCategories.filter(c => c.id !== btn.dataset.id);
+            await persistState();
+            renderIncomeCategories();
+        }));
     }
 
     els.addIncomeCategoryBtn.addEventListener('click', async ()=>{
         const name = prompt('Название категории дохода:');
         if (name) {
-            incomeCategories.push({ id: 'inc' + Date.now(), name });
+            incomeCategories.push({ id:'inc'+Date.now(), name });
             await persistState();
             renderIncomeCategories();
         }
     });
 
-    els.balanceMonth.addEventListener('change', () => {
+    els.balanceMonth.addEventListener('change', ()=>{
         const selectedKey = els.balanceMonth.value;
-        const balance = monthlyBalances[selectedKey] || { start: '', end: '' };
+        const balance = monthlyBalances[selectedKey] || { start:'', end:'' };
         els.balanceStart.value = balance.start || '';
         els.balanceEnd.value = balance.end || '';
         updateBalanceCalculations();
     });
-
     els.balanceStart.addEventListener('input', updateBalanceCalculations);
     els.balanceEnd.addEventListener('input', updateBalanceCalculations);
 
-    els.saveBalance.addEventListener('click', async () => {
+    els.saveBalance.addEventListener('click', async ()=>{
         const selectedKey = els.balanceMonth.value;
         const start = parseFloat(els.balanceStart.value) || 0;
         const end = parseFloat(els.balanceEnd.value) || 0;
@@ -962,7 +1041,6 @@
         alert('Баланс сохранён');
     });
 
-    // Навигация по месяцам
     els.prevMonth.addEventListener('click', ()=>{
         if (isCollapsed) currentWeekStart.setDate(currentWeekStart.getDate()-7);
         else { currentMonth = currentMonth===0?11:currentMonth-1; if (currentMonth===11) currentYear--; }
@@ -974,25 +1052,20 @@
         renderCalendar(); if (currentView==='standard') updateLists();
     });
 
-    // Нижняя навигация
     document.querySelectorAll('.nav-item').forEach(btn => btn.addEventListener('click', ()=> switchPage(btn.dataset.page)));
 
-    // ---------- PWA установка ----------
+    // PWA установка
     let deferredPrompt;
-
     window.addEventListener('beforeinstallprompt', (e) => {
         e.preventDefault();
         deferredPrompt = e;
         const installBtn = document.getElementById('installBtn');
         if (installBtn) installBtn.style.display = 'block';
-
         const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
         if (isIOS) {
-            document.getElementById('installInstructions').textContent =
-                'На iPhone/iPad: нажмите кнопку "Поделиться" (в Safari) и выберите "На экран Домой".';
+            document.getElementById('installInstructions').textContent = 'На iPhone/iPad: нажмите "Поделиться" (в Safari) и выберите "На экран Домой".';
         }
     });
-
     document.getElementById('installBtn')?.addEventListener('click', async () => {
         if (deferredPrompt) {
             deferredPrompt.prompt();
@@ -1002,12 +1075,35 @@
             document.getElementById('installBtn').style.display = 'none';
         }
     });
-
     window.addEventListener('appinstalled', () => {
         document.getElementById('installBtn').style.display = 'none';
         console.log('PWA установлено');
     });
-    // ---------- конец установки ----------
+
+    async function initApp() {
+        await openDB();
+        const saved = await loadData();
+        if (saved) {
+            eventsData = saved.eventsData || eventsData;
+            nextId = saved.nextId || nextId;
+            categories = saved.categories || categories;
+            nextCatId = saved.nextCatId || nextCatId;
+            dayCategories = saved.dayCategories || {};
+            incomeCategories = saved.incomeCategories || [];
+            incomeRecords = saved.incomeRecords || [];
+            nextIncomeId = saved.nextIncomeId || 1;
+            monthlyBalances = saved.monthlyBalances || {};
+            notes = saved.notes || [];
+            nextNoteId = saved.nextNoteId || 1;
+            console.log('Данные загружены из IndexedDB');
+        }
+        switchPage('standardPanel');
+        renderCalendar();
+        updateLists();
+        setInterval(()=>{
+            if (currentPage === 'standardPanel') els.currentTime.textContent = new Date().toLocaleTimeString('ru-RU',{ hour:'2-digit', minute:'2-digit' });
+        }, 60000);
+    }
 
     initApp();
 })();
@@ -1015,13 +1111,13 @@
 
 <!-- Регистрация Service Worker -->
 <script>
-    if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-            navigator.serviceWorker.register('/service-worker.js')
-                .then(reg => console.log('Service Worker зарегистрирован'))
-                .catch(err => console.log('Ошибка Service Worker:', err));
-        });
-    }
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('service-worker.js')
+            .then(reg => console.log('SW зарегистрирован'))
+            .catch(err => console.log('Ошибка SW:', err));
+    });
+}
 </script>
 </body>
 </html>
